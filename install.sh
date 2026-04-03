@@ -143,18 +143,18 @@ if [ -f "$CLAUDE_GLOBAL" ]; then
   if grep -q "CLI Speed Tools" "$CLAUDE_GLOBAL" 2>/dev/null; then
     echo "  ✓ CLAUDE.md already contains speed tools config"
   else
-    if [ -f "$SNIPPET_DIR/claude-md-snippet.md" ]; then
+    if [ -f "$SNIPPET_DIR/CLAUDE.md" ]; then
       echo "" >> "$CLAUDE_GLOBAL"
-      cat "$SNIPPET_DIR/claude-md-snippet.md" >> "$CLAUDE_GLOBAL"
+      cat "$SNIPPET_DIR/CLAUDE.md" >> "$CLAUDE_GLOBAL"
       info "Appended speed tools config to $CLAUDE_GLOBAL"
     else
-      warn "claude-md-snippet.md not found. Add the CLAUDE.md rules manually."
+      warn "CLAUDE.md not found. Add the CLAUDE.md rules manually."
     fi
   fi
 else
-  if [ -f "$SNIPPET_DIR/claude-md-snippet.md" ]; then
+  if [ -f "$SNIPPET_DIR/CLAUDE.md" ]; then
     mkdir -p "$HOME/.claude"
-    cp "$SNIPPET_DIR/claude-md-snippet.md" "$CLAUDE_GLOBAL"
+    cp "$SNIPPET_DIR/CLAUDE.md" "$CLAUDE_GLOBAL"
     info "Created $CLAUDE_GLOBAL with speed tools config"
   fi
 fi
