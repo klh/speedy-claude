@@ -154,10 +154,3 @@ cargo install --list | rg 'ambr' && cargo uninstall amber
 ## License
 
 See [LICENSE](LICENSE).
-
-- **Personal, educational, and open-source use** — free
-- **Commercial use** — requires a license. Contact [speedy-claude@klh.dev](mailto:speedy-claude@klh.dev)
-
-## Credits
-
-Benchmarked on [Tredebanken](https://github.com/klh/tredebanken) — a real-world enterprise TypeScript codebase.
