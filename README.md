@@ -1,16 +1,23 @@
 # speedy-claude
 
-Make Claude Code 10-1400x faster at file operations by replacing its default sequential Read+Edit loop with modern CLI pipelines.
+Based on [agent-skills](https://github.com/addyosmani/agent-skills) — production-grade engineering skills for AI coding agents, extended with CLI speed optimizations that make file operations **10-1400x faster**.
 
-## What is this?
+```
+  DEFINE          PLAN           BUILD          VERIFY         REVIEW          SHIP
+ ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐
+ │ Idea │ ───▶ │ Spec │ ───▶ │ Code │ ───▶ │ Test │ ───▶ │  QA  │ ───▶ │  Go  │
+ │Refine│      │  PRD │      │ Impl │      │Debug │      │ Gate │      │ Live │
+ └──────┘      └──────┘      └──────┘      └──────┘      └──────┘      └──────┘
+  /spec          /plan          /build        /test         /review       /ship
+```
 
-A collection of production-grade engineering skills for AI coding agents — centered around the **CLI Speed Tools** skill that teaches agents to use modern Rust/C CLI replacements instead of slow sequential file operations.
+Plus CLI speed tools that replace slow sequential file operations with single parallel pipelines.
 
-The repo also includes skills for debugging, testing, code review, documentation, and more — all following the [agent-skills](https://github.com/addyosmani/agent-skills) format.
+---
 
 ## The Problem
 
-Claude Code edits files one at a time. Each Read or Edit tool call costs ~0.5-1s of round-trip overhead. When a change affects 50 files, that's **~50 seconds** of just waiting for tool calls — before Claude even thinks.
+Claude Code edits files one at a time. Each Read or Edit tool call costs ~0.5-1s of round-trip overhead. When a change affects 50 files, that's **~50 seconds** of just waiting — before Claude even thinks.
 
 The fix: single CLI commands that do the same work in milliseconds.
 
@@ -29,27 +36,7 @@ Tested on a real codebase (733 TypeScript files, ~2500 total files, Apple M-seri
 | JSON parsing | — | `python3 -c` 56ms | `jq` 31ms | **1.8x** |
 | File copy (NFS) | — | `cp` 6m18s | `xcp` 37s | **10x** |
 
-## Skills Included
-
-| Skill | Purpose |
-|-------|---------|
-| `cli-speed-tools` | Replace slow CLI tools with modern alternatives |
-| `systematic-debugging` | Four-phase root cause analysis |
-| `code-simplifier` | Simplify and refactor code |
-| `find-bugs` | Bug and vulnerability detection |
-| `testing-patterns` | Unit testing and mocking strategies |
-| `code-documenter` | Generate documentation |
-| `agents-md` | Create AGENTS.md files |
-| `core-components` | Design system patterns |
-| `lit-dev` | Lit web components with TypeScript |
-| `zod-validation` | Zod schema validation |
-| `zod4` | Zod 4 validation library |
-| `openapi-directory-first` | API documentation lookup |
-| `project-memory` | Structured project memory |
-| `settings-audit` | Settings.json audit |
-| `supabase-postgres-best-practices` | Postgres optimization |
-| `find-skills` | Discover agent skills |
-| `skill-lookup` | Search skill registries |
+---
 
 ## Install
 
@@ -65,8 +52,6 @@ git clone https://github.com/klh/speedy-claude.git ~/.claude
 # Install CLI tools
 ~/.claude/install.sh
 ```
-
-This gives you everything: skills, CLAUDE.md config, and 30+ CLI speed tools.
 
 ### Option 2: CLI tools only (no skills)
 
@@ -87,9 +72,120 @@ Copy skill directories from `skills/` into `~/.claude/skills/`.
 
 Skills and CLAUDE.md are included by cloning the repo into `~/.claude/` — no copying needed.
 
-## How it works
+---
 
-The `cli-speed-tools` skill teaches Claude Code to:
+## All 39 Skills
+
+### Define — Clarify what to build
+
+| Skill | What It Does |
+|-------|-------------|
+| [idea-refine](skills/idea-refine/SKILL.md) | Structured divergent/convergent thinking |
+| [spec-driven-development](skills/spec-driven-development/SKILL.md) | Write PRD before any code |
+
+### Plan — Break it down
+
+| Skill | What It Does |
+|-------|-------------|
+| [planning-and-task-breakdown](skills/planning-and-task-breakdown/SKILL.md) | Decompose specs into verifiable tasks |
+
+### Build — Write the code
+
+| Skill | What It Does |
+|-------|-------------|
+| [incremental-implementation](skills/incremental-implementation/SKILL.md) | Thin vertical slices |
+| [test-driven-development](skills/test-driven-development/SKILL.md) | Red-Green-Refactor |
+| [context-engineering](skills/context-engineering/SKILL.md) | Feed agents the right info at the right time |
+| [frontend-ui-engineering](skills/frontend-ui-engineering/SKILL.md) | Component architecture, design systems |
+| [api-and-interface-design](skills/api-and-interface-design/SKILL.md) | Contract-first API design |
+| [cli-speed-tools](skills/cli-speed-tools/SKILL.md) | Modern CLI replacements (10-1400x faster) |
+| [core-components](skills/core-components/SKILL.md) | Design system patterns |
+| [lit-dev](skills/lit-dev/SKILL.md) | Lit web components with TypeScript |
+
+### Verify — Prove it works
+
+| Skill | What It Does |
+|-------|-------------|
+| [browser-testing-with-devtools](skills/browser-testing-with-devtools/SKILL.md) | Chrome DevTools MCP testing |
+| [debugging-and-error-recovery](skills/debugging-and-error-recovery/SKILL.md) | Five-step triage |
+| [systematic-debugging](skills/systematic-debugging/SKILL.md) | Four-phase root cause analysis |
+| [find-bugs](skills/find-bugs/SKILL.md) | Bug and vulnerability detection |
+| [testing-patterns](skills/testing-patterns/SKILL.md) | Unit testing and mocking strategies |
+| [zod-validation](skills/zod-validation/SKILL.md) | Zod schema validation |
+| [zod4](skills/zod4/SKILL.md) | Zod 4 validation library |
+
+### Review — Quality gates before merge
+
+| Skill | What It Does |
+|-------|-------------|
+| [code-review-and-quality](skills/code-review-and-quality/SKILL.md) | Five-axis code review |
+| [code-simplification](skills/code-simplification/SKILL.md) | Chesterton's Fence, Rule of 500 |
+| [code-simplifier](skills/code-simplifier/SKILL.md) | Simplify and refactor code |
+| [security-and-hardening](skills/security-and-hardening/SKILL.md) | OWASP Top 10 prevention |
+| [performance-optimization](skills/performance-optimization/SKILL.md) | Measure-first performance |
+
+### Ship — Deploy with confidence
+
+| Skill | What It Does |
+|-------|-------------|
+| [git-workflow-and-versioning](skills/git-workflow-and-versioning/SKILL.md) | Trunk-based development |
+| [ci-cd-and-automation](skills/ci-cd-and-automation/SKILL.md) | Shift Left, feature flags |
+| [deprecation-and-migration](skills/deprecation-and-migration/SKILL.md) | Code-as-liability mindset |
+| [documentation-and-adrs](skills/documentation-and-adrs/SKILL.md) | Architecture Decision Records |
+| [shipping-and-launch](skills/shipping-and-launch/SKILL.md) | Pre-launch checklists |
+
+### Configure & Docs
+
+| Skill | What It Does |
+|-------|-------------|
+| [settings-audit](skills/settings-audit/SKILL.md) | Settings.json audit |
+| [project-memory](skills/project-memory/SKILL.md) | Structured project memory |
+| [find-skills](skills/find-skills/SKILL.md) | Discover agent skills |
+| [skill-lookup](skills/skill-lookup/SKILL.md) | Search skill registries |
+| [agents-md](skills/agents-md/SKILL.md) | Create AGENTS.md files |
+| [code-documenter](skills/code-documenter/SKILL.md) | Generate documentation |
+| [openapi-directory-first](skills/openapi-directory-first/SKILL.md) | API documentation lookup |
+| [supabase-postgres-best-practices](skills/supabase-postgres-best-practices/SKILL.md) | Postgres optimization |
+
+### Meta
+
+| Skill | What It Does |
+|-------|-------------|
+| [using-agent-skills](skills/using-agent-skills/SKILL.md) | How to use this skills pack |
+
+---
+
+## Slash Commands
+
+7 commands that map to the development lifecycle:
+
+| What you're doing | Command | Key principle |
+|-------------------|---------|---------------|
+| Define what to build | `/spec` | Spec before code |
+| Plan how to build it | `/plan` | Small, atomic tasks |
+| Build incrementally | `/build` | One slice at a time |
+| Prove it works | `/test` | Tests are proof |
+| Review before merge | `/review` | Improve code health |
+| Simplify the code | `/code-simplify` | Clarity over cleverness |
+| Ship to production | `/ship` | Faster is safer |
+
+---
+
+## Agent Personas
+
+Pre-configured specialist personas for targeted reviews:
+
+| Agent | Role | Perspective |
+|-------|------|-------------|
+| [code-reviewer](agents/code-reviewer.md) | Senior Staff Engineer | Five-axis code review |
+| [test-engineer](agents/test-engineer.md) | QA Specialist | Test strategy, coverage analysis |
+| [security-auditor](agents/security-auditor.md) | Security Engineer | Vulnerability detection, OWASP |
+
+---
+
+## How CLI Speed Tools Work
+
+The `cli-speed-tools` skill teaches agents to:
 
 1. **Never Read+Edit in a loop** — use `ambr`/`sd`/`sad` pipelines for multi-file changes
 2. **Search with context** — use `batgrep` instead of `rg` + separate Read calls
@@ -98,40 +194,29 @@ The `cli-speed-tools` skill teaches Claude Code to:
 5. **Use parallel execution** — `fd -x` and `ambr` run in parallel by default
 6. **Use single-command patterns** — `rg -c | awk` replaces Grep+Read+count
 
-These rules are loaded every session and override Claude's default behavior of sequential file-by-file operations.
+---
 
 ## Project Structure
 
 ```
-skills/       → Core skills (SKILL.md per directory)
-references/   → Supplementary checklists
-docs/         → Setup guides
-install.sh    → One-liner installer for 30+ CLI speed tools
+speedy-claude/
+├── skills/                    # 39 skills (SKILL.md per directory)
+├── agents/                    # 3 specialist personas
+├── hooks/                     # Session lifecycle hooks
+├── .claude/commands/          # 7 slash commands
+├── references/                # 4 supplementary checklists
+├── docs/                      # Setup guides per tool
+├── install.sh                 # CLI speed tools installer
+├── CLAUDE.md                  # Project config
+└── AGENTS.md                  # Agent conventions
 ```
 
-## Requirements
+---
 
-- macOS (Linux support via install flags)
-- [Homebrew](https://brew.sh)
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (optional — tools work independently)
+## Credits
 
-## Uninstall
-
-```bash
-# Remove the CLAUDE.md additions
-# (manually remove the "CLI Speed Tools" section from ~/.claude/CLAUDE.md)
-
-# Reset git pager
-git config --global --unset core.pager
-git config --global --unset interactive.diffFilter
-
-# Uninstall brew packages
-brew uninstall git-delta hyperfine tokei procs zoxide bottom lazygit broot watchexec doggo xcp difftastic sd sad bat eza fd ripgrep jq dust bat-extras shellcheck actionlint act xh hurl aria2 tree gum git-standup fswatch micro tldr serve mkcert
-
-# Uninstall cargo packages
-cargo install --list | rg 'ambr' && cargo uninstall amber
-```
+Based on [agent-skills](https://github.com/addyosmani/agent-skills) by Addy Osmani, extended with CLI speed tools and custom skills.
 
 ## License
 
-See [LICENSE](LICENSE).
+MIT

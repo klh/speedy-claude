@@ -1,0 +1,19 @@
+{
+  "name": "speedy-claude",
+  "owner": {
+    "name": "Klaus Hougesen"
+  },
+  "metadata": {
+    "description": "Production-grade engineering skills based on agent-skills, extended with CLI speed optimizations and custom skills."
+  },
+  "plugins": [
+    {
+      "name": "speedy-claude",
+      "source": {
+        "source": "github",
+        "repo": "klh/speedy-claude"
+      },
+      "description": "Agent skills covering every phase of software development plus CLI speed tools (10-1400x faster file operations)."
+    }
+  ]
+}
