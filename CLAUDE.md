@@ -53,10 +53,15 @@ These rules override the default behavior of sequential file-by-file operations,
 
 ## Install
 
-One-liner to install all CLI speed tools:
+Clone this repo into `~/.claude/` for a dotfiles-style setup:
+
+```bash
+git clone https://github.com/klh/speedy-claude.git ~/.claude
+~/.claude/install.sh
+```
+
+Or install CLI tools only (no skills):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/klh/speedy-claude/main/install.sh | bash
 ```
-
-This installs 30+ tools via Homebrew/Cargo, configures delta as git pager, initializes zoxide, and appends speed rules to `~/.claude/CLAUDE.md`.

@@ -53,15 +53,20 @@ Tested on a real codebase (733 TypeScript files, ~2500 total files, Apple M-seri
 
 ## Install
 
-### Option 1: Full bootstrap (recommended — like dotfiles)
+### Option 1: Clone into ~/.claude (recommended — like dotfiles)
 
 ```bash
-git clone https://github.com/klh/speedy-claude.git
-cd speedy-claude
-./install.sh
+# Back up existing config if needed
+mv ~/.claude ~/.claude.bak
+
+# Clone directly — skills/ and CLAUDE.md land in the right place
+git clone https://github.com/klh/speedy-claude.git ~/.claude
+
+# Install CLI tools
+~/.claude/install.sh
 ```
 
-This installs everything: CLI tools, skills, and CLAUDE.md config.
+This gives you everything: skills, CLAUDE.md config, and 30+ CLI speed tools.
 
 ### Option 2: CLI tools only (no skills)
 
@@ -78,9 +83,9 @@ Copy skill directories from `skills/` into `~/.claude/skills/`.
 1. Installs 30+ tools via Homebrew and Cargo
 2. Sets `delta` as your git diff pager
 3. Initializes `zoxide` for smart cd
-4. Copies 18 skills into `~/.claude/skills/`
-5. Appends the CLAUDE.md speed rules to your global config
-6. Prints a summary of what changed
+4. Prints a summary of what changed
+
+Skills and CLAUDE.md are included by cloning the repo into `~/.claude/` — no copying needed.
 
 ## How it works
 

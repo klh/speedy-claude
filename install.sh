@@ -134,54 +134,6 @@ if [ -n "$SHELL_RC" ]; then
   fi
 fi
 
-# ─── Skills installation ─────────────────────────────────
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILLS_DIR="$SCRIPT_DIR/skills"
-CLAUDE_SKILLS="$HOME/.claude/skills"
-
-if [ -d "$SKILLS_DIR" ]; then
-  SKILL_COUNT=$(find "$SKILLS_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-  info "Installing $SKILL_COUNT skills into $CLAUDE_SKILLS..."
-  mkdir -p "$CLAUDE_SKILLS"
-  for skill_dir in "$SKILLS_DIR"/*/; do
-    skill_name=$(basename "$skill_dir")
-    if [ -d "$CLAUDE_SKILLS/$skill_name" ]; then
-      echo "  ✓ $skill_name (already exists, skipping)"
-    else
-      cp -r "$skill_dir" "$CLAUDE_SKILLS/$skill_name"
-      echo "  → $skill_name"
-    fi
-  done
-else
-  warn "skills/ directory not found. Skipping skills installation."
-  warn "For full bootstrap, clone the repo: git clone https://github.com/klh/speedy-claude.git"
-fi
-
-# ─── CLAUDE.md integration ───────────────────────────────
-
-CLAUDE_GLOBAL="$HOME/.claude/CLAUDE.md"
-
-if [ -f "$CLAUDE_GLOBAL" ]; then
-  if grep -q "CLI Speed Tools" "$CLAUDE_GLOBAL" 2>/dev/null; then
-    echo "  ✓ CLAUDE.md already contains speed tools config"
-  else
-    if [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
-      echo "" >> "$CLAUDE_GLOBAL"
-      cat "$SCRIPT_DIR/CLAUDE.md" >> "$CLAUDE_GLOBAL"
-      info "Appended speed tools config to $CLAUDE_GLOBAL"
-    else
-      warn "CLAUDE.md not found in repo. Add the CLAUDE.md rules manually."
-    fi
-  fi
-else
-  if [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
-    mkdir -p "$HOME/.claude"
-    cp "$SCRIPT_DIR/CLAUDE.md" "$CLAUDE_GLOBAL"
-    info "Created $CLAUDE_GLOBAL with speed tools config"
-  fi
-fi
-
 # ─── Summary ─────────────────────────────────────────────
 
 echo ""
@@ -193,14 +145,16 @@ echo "  What changed:"
 echo "    • 30+ CLI tools installed via brew/cargo"
 echo "    • delta set as git diff pager"
 echo "    • zoxide initialized in shell"
-echo "    • CLAUDE.md updated with speed rules"
-echo "    • Skills copied to ~/.claude/skills/"
 echo ""
 echo "  Next steps:"
 echo "    1. Restart your shell (or source $SHELL_RC)"
 echo "    2. Start a new Claude Code session"
 echo "    3. Ask Claude to rename something across the codebase"
 echo "       — it will now use ambr/sd/sad instead of Read+Edit loops"
+echo ""
+echo "  Skills & CLAUDE.md:"
+echo "    If you cloned into ~/.claude/, skills and config are already in place."
+echo "    Otherwise, see README.md for setup options."
 echo ""
 echo "  Verify: fd --version && rg --version | head -1 && delta --version"
 echo ""
