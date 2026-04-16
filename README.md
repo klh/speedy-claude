@@ -2,6 +2,8 @@
 
 Based on [agent-skills](https://github.com/addyosmani/agent-skills) — production-grade engineering skills for AI coding agents, extended with CLI speed optimizations that make file operations **10-1400x faster**.
 
+Companion repo: **[klh/skills](https://github.com/klh/skills)** — personal agent skills published at `npx skills add klh/skills`.
+
 ```
   DEFINE          PLAN           BUILD          VERIFY         REVIEW          SHIP
  ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐
@@ -59,9 +61,15 @@ git clone https://github.com/klh/speedy-claude.git ~/.claude
 curl -fsSL https://raw.githubusercontent.com/klh/speedy-claude/main/install.sh | bash
 ```
 
-### Option 3: Copy individual skills
+### Option 3: Install via npx skills
 
-Copy skill directories from `skills/` into `~/.claude/skills/`.
+```bash
+# Install all skills from this repo
+npx skills add klh/speedy-claude -g -y
+
+# Or install the companion personal skills repo
+npx skills add klh/skills -g -y
+```
 
 ## What the install script does
 
@@ -215,7 +223,9 @@ speedy-claude/
 
 ## Credits
 
-Based on [agent-skills](https://github.com/addyosmani/agent-skills) by Addy Osmani, extended with CLI speed tools and custom skills.
+- **[agent-skills](https://github.com/addyosmani/agent-skills)** by Addy Osmani — 20 production-grade engineering skills
+- **[klh/skills](https://github.com/klh/skills)** — 13 personal agent skills, published via `npx skills add klh/skills`
+- Custom skills and CLI speed tools by [Klaus L. Hougesen](https://github.com/klh)
 
 ## License
 
