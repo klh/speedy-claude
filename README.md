@@ -204,6 +204,33 @@ The `cli-speed-tools` skill teaches agents to:
 
 ---
 
+## Tool-First Enforcement (optional)
+
+The skill + `CLAUDE.md` rules are *soft* guidance. For a non-blocking hard
+guardrail, this repo ships `hooks/tool-enforce.sh` — a `PreToolUse` advisory
+that nudges Claude toward the fast tool whenever it standalone-invokes a native
+binary (`ls -> eza`, `find -> fd`, `grep -> rg`, `cat -> bat`, `sed -> sd`,
+`du -> dust`, `diff -> difft`, `ps -> procs`, `curl -> xh`). It never blocks
+(exit 0) and stays low-noise: it skips `git` subcommands, mid-pipe use,
+`--version`/`--help` probes, and non-Bash tools.
+
+Enable it by appending (idempotently) to your `PreToolUse` hooks, and add a
+`permissions.allow` entry for the fast tools so they don't prompt on first use
+(an allowlist removes the friction that otherwise biases toward native tools):
+
+```bash
+HOOK="bash $HOME/.claude/hooks/tool-enforce.sh"
+jq --arg h "$HOOK" \
+  'if (.hooks.PreToolUse // [] | map(.hooks[]?.command) | any(test("tool-enforce.sh"))) then .
+   else .hooks.PreToolUse += [{"hooks":[{"type":"command","command":$h}]}] end' \
+  ~/.claude/settings.json > ~/.claude/settings.json.new \
+  && mv ~/.claude/settings.json.new ~/.claude/settings.json
+```
+
+Re-verify any time with `bash ~/.claude/hooks/verify-tools.sh`.
+
+---
+
 ## Project Structure
 
 ```
