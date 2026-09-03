@@ -1,0 +1,4 @@
+interface:
+  display_name: "SQL Best Practice"
+  short_description: "Review idiomatic SQL code conventions."
+  default_prompt: "Use $sql-best-practice to review SQL code against common ecosystem best practices."

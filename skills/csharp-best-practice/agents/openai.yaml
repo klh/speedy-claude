@@ -1,0 +1,4 @@
+interface:
+  display_name: "C# Best Practice"
+  short_description: "Review idiomatic C# code conventions."
+  default_prompt: "Use $csharp-best-practice to review C# code against common ecosystem best practices."

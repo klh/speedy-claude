@@ -1,0 +1,4 @@
+interface:
+  display_name: "SQLite"
+  short_description: "SQLite queries, backups, diffing, and migrations"
+  default_prompt: "Use $sqlite for all SQLite operations: queries, backups, health checks, diffing, sync, migrations, and application integration."

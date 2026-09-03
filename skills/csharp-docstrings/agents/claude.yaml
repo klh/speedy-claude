@@ -1,0 +1,4 @@
+interface:
+  display_name: "C# Docstrings"
+  short_description: "Normalize C# source documentation."
+  default_prompt: "Use $csharp-docstrings to add or normalize C# source documentation for external tools."

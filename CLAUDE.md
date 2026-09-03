@@ -351,7 +351,7 @@ RIGHT: npm test && qlty check && difft main...HEAD
 
 ## Available Skills Quick Reference
 
-20 active skills (optional ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
+28 active skills (optional ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
 
 ### Editing & Code Intelligence
 
@@ -361,6 +361,11 @@ RIGHT: npm test && qlty check && difft main...HEAD
 | `code-simplifier` | Simplifying, refactoring, or cleaning up existing code |
 | `find-bugs` | Reviewing changes for bugs, security vulnerabilities, code quality |
 | `ast-grep` | Writing ast-grep rules for structural code search/rewrite beyond text search |
+| `docker` | ANY container work — Dockerfile/compose authoring, debugging, networking, Buildx |
+| `az` | Azure CLI auth checks, subscription context, resource/deployment lookups |
+| `sqlite` | SQLite queries (read-only safe scripts), backups, health checks, diffing |
+| `sql-best-practice` | Idiomatic SQL review, schema work, query tuning |
+| `csharp-best-practice` / `csharp-docstrings` | Idiomatic C# review + XML doc comments (.NET repos) |
 | `openapi-directory-first` | Working with ANY public API — check openapi-directory before training data or web search |
 
 ### Frontend & UI

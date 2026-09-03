@@ -1,0 +1,4 @@
+interface:
+  display_name: "Azure CLI"
+  short_description: "Operate Azure CLI workflows with safe diagnostics"
+  default_prompt: "Use $az to inspect Azure CLI auth, subscription context, and safe command paths."
