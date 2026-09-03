@@ -1,0 +1,13 @@
+{
+  "name": "@klh/skill-klh-zod-validation",
+  "version": "1.0.0",
+  "description": "Zod schema validation patterns. Use when validating API inputs and data.",
+  "main": "SKILL.md",
+  "files": [
+    "SKILL.md"
+  ],
+  "keywords": [
+    "agent-skills"
+  ],
+  "license": "MIT"
+}

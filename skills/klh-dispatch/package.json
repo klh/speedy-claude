@@ -1,0 +1,7 @@
+{
+  "name": "@klh/skill-klh-dispatch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Single entry-point orchestrator that dispatches to the right klh-* skill",
+  "license": "MIT"
+}

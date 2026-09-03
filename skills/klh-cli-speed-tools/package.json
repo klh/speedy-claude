@@ -1,0 +1,19 @@
+{
+  "name": "@klh/skill-klh-cli-speed-tools",
+  "version": "1.0.0",
+  "description": "Use when listing files, searching file contents, finding files by name, or viewing files in terminal. Replace slow standard tools with faster modern alternatives.",
+  "main": "SKILL.md",
+  "files": [
+    "SKILL.md"
+  ],
+  "keywords": [
+    "agent-skills",
+    "cli",
+    "tools",
+    "ripgrep",
+    "eza",
+    "fd",
+    "bat"
+  ],
+  "license": "MIT"
+}

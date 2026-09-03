@@ -1,0 +1,13 @@
+{
+  "name": "@klh/skill-klh-testing-patterns",
+  "version": "1.0.0",
+  "description": "Jest testing patterns, factory functions, mocking strategies, and TDD workflow. Use when writing unit tests, creating test factories, or following TDD red-green-refactor cycle.",
+  "main": "SKILL.md",
+  "files": [
+    "SKILL.md"
+  ],
+  "keywords": [
+    "agent-skills"
+  ],
+  "license": "MIT"
+}

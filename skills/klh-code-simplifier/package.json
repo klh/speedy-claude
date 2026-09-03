@@ -1,0 +1,13 @@
+{
+  "name": "@klh/skill-klh-code-simplifier",
+  "version": "1.0.0",
+  "description": "Simplifies and refines code for clarity, consistency, and maintainability while preserving all functionality. Use when asked to \"simplify code\", \"clean up code\", \"refactor for clarity\", \"improve readability\", or review recently modified code for elegance. Focuses on project-specific best practices.",
+  "main": "SKILL.md",
+  "files": [
+    "SKILL.md"
+  ],
+  "keywords": [
+    "agent-skills"
+  ],
+  "license": "MIT"
+}

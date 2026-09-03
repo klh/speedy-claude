@@ -1,0 +1,13 @@
+{
+  "name": "@klh/skill-klh-openapi-directory-first",
+  "version": "1.0.0",
+  "description": "Use when working with any public API (Stripe, GitHub, Spotify, AWS, Twilio, Slack, Google, etc.) and needing accurate endpoint signatures, parameter types, auth schemes, or response schemas. Use BEFORE consulting training data, doc sites, Stack Overflow, or context7 to avoid outdated/stale API info.",
+  "main": "SKILL.md",
+  "files": [
+    "SKILL.md"
+  ],
+  "keywords": [
+    "agent-skills"
+  ],
+  "license": "MIT"
+}

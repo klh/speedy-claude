@@ -1,0 +1,14 @@
+{
+  "name": "@klh/skill-klh-lit-dev",
+  "version": "1.0.0",
+  "description": "Use when creating Lit web components with TypeScript decorators, JSDoc documentation, Zod validation, and Playwright testing. Use for building reusable web components, design systems, or shareable UI elements that work across frameworks.",
+  "main": "SKILL.md",
+  "files": [
+    "SKILL.md",
+    "template.ts"
+  ],
+  "keywords": [
+    "agent-skills"
+  ],
+  "license": "MIT"
+}

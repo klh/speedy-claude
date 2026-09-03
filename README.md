@@ -74,7 +74,7 @@ Register them via `settings.example.json` (below).
 
 `settings.example.json` is a ready template: GLM/z.ai (or any Anthropic-compatible) env vars, `acceptEdits`, an evidence-based allowlist (fast CLI tools + `npm test`/`dotnet test`/`git fetch`/`npx tsc --noEmit`), and deny guardrails (`sudo rm`, force-push, `rm -rf ~/*`). Copy to `~/.claude/settings.json`, fill the token, adjust to your stack.
 
-## Skills — 28 active, curated
+## Skills — 47 active (base set + klh-* variants + audited registry adds)
 
 A 2026-09 audit (`skillUsage` telemetry across months of sessions) found ~half the original skill pack was never invoked — pure context cost in every session. The active set is curated; the rest are parked in [`skills-available/`](skills-available/README.md) with a restore command (`git mv skills-available/<name> skills/`). Parked skills cost zero context.
 
@@ -128,7 +128,7 @@ claude mcp add -s user -t http context7 https://mcp.context7.com/mcp
 
 ## Install
 
-### Option 1: Clone into ~/.claude (recommended — like dotfiles)
+### Option 1: Clone into ~/.claude (recommended — like dotfiles, full restore)
 
 ```bash
 mv ~/.claude ~/.claude.bak
@@ -136,6 +136,8 @@ git clone https://github.com/klh/speedy-claude.git ~/.claude
 ~/.claude/install.sh
 cp ~/.claude/settings.example.json ~/.claude/settings.json  # then edit token/allowlist
 ```
+
+This restores the complete setup: 47 skills, 9 personas, 5 hooks, slash commands, statusline, and CLAUDE.md.
 
 ### Option 2: CLI tools only (no skills)
 
@@ -150,6 +152,19 @@ npx skills add klh/speedy-claude -g -y   # or the companion: npx skills add klh/
 ```
 
 `install.sh` installs 35+ tools (brew/cargo + the qlty release binary), sets `delta` as git pager, and initializes `zoxide`. It does **not** touch your `settings.json` — copy `settings.example.json` yourself.
+
+### Automated daily review (optional, session-independent)
+
+Headless `claude -p` performance + tool-stack audits at 06:43 daily, findings land in `~/.claude/insights/` and surface at the next session start:
+
+```bash
+cp ~/.claude/hooks/daily-insights.sh ~/.claude/hooks/            # already there via clone
+cp ~/.claude/hooks/launchd/com.klh.claude-insights.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.klh.claude-insights.plist
+```
+
+Statusline: reference implementation in `statusLine.sh` — register with
+`"statusLine": {"type": "command", "command": "bash $HOME/.claude/statusLine.sh"}` in settings.json.
 
 ## The full dev loop
 

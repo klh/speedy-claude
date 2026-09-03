@@ -1,0 +1,15 @@
+{
+  "name": "@klh/skill-klh-project-memory",
+  "version": "1.0.0",
+  "description": "Set up and maintain a structured project memory system in docs/project_notes/ that tracks bugs with solutions, architectural decisions, key project facts, and work history. Use this skill when asked to \"set up project memory\", \"track our decisions\", \"log a bug fix\", \"update project memory\", or \"initialize memory system\". Configures both CLAUDE.md and AGENTS.md to maintain memory awareness across different AI coding tools.",
+  "main": "SKILL.md",
+  "files": [
+    "SKILL.md",
+    "README.md",
+    "references/"
+  ],
+  "keywords": [
+    "agent-skills"
+  ],
+  "license": "MIT"
+}

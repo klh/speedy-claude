@@ -351,36 +351,36 @@ RIGHT: npm test && qlty check && difft main...HEAD
 
 ## Available Skills Quick Reference
 
-28 active skills (optional ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
+47 active skills (base + klh-* variants + audited registry adds; unused ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
 
 ### Editing & Code Intelligence
 
 | Skill | When to use |
 |-------|-------------|
-| `cli-speed-tools` | ANY terminal file operation — listing, searching, reading files |
-| `code-simplifier` | Simplifying, refactoring, or cleaning up existing code |
-| `find-bugs` | Reviewing changes for bugs, security vulnerabilities, code quality |
+| `klh-cli-speed-tools` | ANY terminal file operation — listing, searching, reading files |
+| `klh-code-simplifier` | Simplifying, refactoring, or cleaning up existing code |
+| `klh-find-bugs` | Reviewing changes for bugs, security vulnerabilities, code quality |
 | `ast-grep` | Writing ast-grep rules for structural code search/rewrite beyond text search |
 | `docker` | ANY container work — Dockerfile/compose authoring, debugging, networking, Buildx |
 | `az` | Azure CLI auth checks, subscription context, resource/deployment lookups |
 | `sqlite` | SQLite queries (read-only safe scripts), backups, health checks, diffing |
 | `sql-best-practice` | Idiomatic SQL review, schema work, query tuning |
 | `csharp-best-practice` / `csharp-docstrings` | Idiomatic C# review + XML doc comments (.NET repos) |
-| `openapi-directory-first` | Working with ANY public API — check openapi-directory before training data or web search |
+| `klh-openapi-directory-first` | Working with ANY public API — check openapi-directory before training data or web search |
 
 ### Frontend & UI
 
 | Skill | When to use |
 |-------|-------------|
-| `core-components` | Building UI, using design tokens, or working with the component library |
-| `lit-dev` | Creating Lit web components with TypeScript |
+| `klh-core-components` | Building UI, using design tokens, or working with the component library |
+| `klh-lit-dev` | Creating Lit web components with TypeScript |
 | `browser-testing-with-devtools` | Browser testing, DOM/console/network inspection via Chrome DevTools MCP |
 
 ### Validation & Testing
 
 | Skill | When to use |
 |-------|-------------|
-| `zod-validation` | Validating API inputs and data with Zod schemas |
+| `klh-zod-validation` | Validating API inputs and data with Zod schemas |
 | `zod4` | Using Zod 4 schema validation library |
 | `test-driven-development` | Before implementing ANY feature or bugfix |
 
@@ -388,7 +388,7 @@ RIGHT: npm test && qlty check && difft main...HEAD
 
 | Skill | When to use |
 |-------|-------------|
-| `systematic-debugging` | Bugs, test failures, unexpected behavior — root cause before any fix |
+| `klh-systematic-debugging` | Bugs, test failures, unexpected behavior — root cause before any fix |
 | `spec-driven-development` | Starting a new project/feature with no specification |
 | `context-engineering` | Setting up or repairing agent context/rules files for a project |
 
@@ -396,9 +396,22 @@ RIGHT: npm test && qlty check && difft main...HEAD
 
 | Skill | When to use |
 |-------|-------------|
-| `agents-md` | Creating/maintaining AGENTS.md / CLAUDE.md agent docs |
-| `project-memory` | Setting up structured project memory in docs/project_notes/ |
-| `settings-audit` | Auditing/generating a project's Claude Code settings.json permissions |
+| `klh-agents-md` | Creating/maintaining AGENTS.md / CLAUDE.md agent docs |
+| `klh-project-memory` | Setting up structured project memory in docs/project_notes/ |
+| `klh-settings-audit` | Auditing/generating a project's Claude Code settings.json permissions |
 | `skill-lookup` | Search and install skills from the prompts.chat registry |
 | `find-skills` | Discover and install agent skills |
 | `git-workflow-and-versioning` | Committing, branching, organizing parallel work streams |
+
+### klh-* variants & workflow skills
+
+| Skill | When to use |
+|-------|-------------|
+| `klh-dispatch` | Single entry-point orchestrator routing tasks to the right klh-* skill |
+| `klh-testing-patterns` | Jest factories, mocking strategies, TDD workflow |
+| `brainstorming` | Before creative work — explores intent/requirements/design |
+| `writing-plans` | Have requirements for a multi-step task, before touching code |
+| `verification-before-completion` | Before claiming work is done/committed — evidence before assertions |
+| `requesting-code-review` | Completing tasks or major features, before merge |
+| `receiving-code-review` | Processing review feedback with technical rigor |
+| `dinero-regnskab` | Visma Dinero bookkeeping automation (browser) |

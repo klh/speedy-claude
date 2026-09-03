@@ -1,0 +1,13 @@
+{
+  "name": "@klh/skill-klh-core-components",
+  "version": "1.0.0",
+  "description": "Core component library and design system patterns. Use when building UI, using design tokens, or working with the component library.",
+  "main": "SKILL.md",
+  "files": [
+    "SKILL.md"
+  ],
+  "keywords": [
+    "agent-skills"
+  ],
+  "license": "MIT"
+}
