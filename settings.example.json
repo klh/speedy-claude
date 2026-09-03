@@ -115,6 +115,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash $HOME/.claude/hooks/md-format.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
             "command": "bash $HOME/.claude/hooks/syntax-check.sh"
           }
         ]

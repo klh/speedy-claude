@@ -67,6 +67,7 @@ Tested on a real codebase (733 TypeScript files, ~2500 total files, Apple M-seri
 | `edit-enforce.sh` | PreToolUse/Bash | **Denies** shell file-writes (cat redirects, `sed -i`, `perl -i`), **nudges** interpreter-heredoc rewriters and `echo >` content generation. Exempts `/tmp`, `$TMPDIR`, `/dev/*` |
 | `syntax-check.sh` | PostToolUse/Edit\|Write | Instant parse check of the edited file; failures returned to the agent to fix immediately |
 | `skill-install-gate.sh` | PreToolUse/Bash | **Denies** third-party skill/plugin/MCP installs unless `--security-reviewed` is present — earned only via the `skill-security-review` skill (exfiltration/injection/fraud audit) |
+| `md-format.sh` | PostToolUse/Edit\|Write (.md) | Auto-formats markdown with prettier — GFM table alignment, list markers, fence style; prose preserved |
 
 Register them via `settings.example.json` (below).
 

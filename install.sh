@@ -151,6 +151,12 @@ if command -v npm >/dev/null 2>&1; then
     echo "  → chrome-devtools-mcp (browser testing MCP)..."
     npm install -g chrome-devtools-mcp 2>/dev/null || warn "chrome-devtools-mcp install failed (npm)"
   fi
+  if command -v prettier >/dev/null 2>&1; then
+    echo "  ✓ prettier (already installed)"
+  else
+    echo "  → prettier (GFM markdown formatter for the md-format hook)..."
+    npm install -g prettier 2>/dev/null || warn "prettier install failed (npm)"
+  fi
   if command -v esbuild >/dev/null 2>&1; then
     echo "  ✓ esbuild (already installed)"
   else

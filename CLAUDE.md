@@ -17,6 +17,7 @@
 - Bulk mechanical replaces: `sd` / `ambr` (fast, blessed). Identifier/structure-shaped changes: `ast-grep`. Semantic multi-file changes: Edit per file.
 - Capturing **command output** to a file (`xh ... > resp.json`) is fine; generating file *content* through the shell is not.
 - After any structural edit, fix syntax errors reported by the PostToolUse check before moving on.
+- Markdown is auto-formatted on every save (`md-format.sh` → prettier, GFM, prose preserved). Do not hand-align tables — write them loosely and let the formatter tidy; re-read after bulk writes.
 
 ## Structural Editing & Linting
 
