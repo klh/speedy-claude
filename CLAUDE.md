@@ -19,6 +19,7 @@
 - After any structural edit, fix syntax errors reported by the PostToolUse check before moving on.
 - **Verify every 3rd edit** to the same file: run/build/test it then, not after the 5th (observed failure mode: five blind edits, then the first run crashes).
 - **>5 planned changes to one file** = re-read once and do a single whole-file Write, not 3 Reads + 7 Edits of churn.
+- **Automation architecture (doctrine):** glue logic in TypeScript run by Bun (`bun hooks/x.ts`) — typed, testable, real parsers (e.g. shell-quote AST for command analysis, NEVER regex against shell text). Heavy operations go to native CLI tools launched with ARGUMENT ARRAYS (no shell re-parsing, no quoting bugs), batched — one rg over 10k files, not 10k launches. Rust only when profiling proves a bottleneck. Plain bash remains for trivial one-liners only.
 - Markdown is auto-formatted on every save (`md-format.sh` → prettier, GFM, prose preserved). Do not hand-align tables — write them loosely and let the formatter tidy; re-read after bulk writes.
 
 ## Structural Editing & Linting

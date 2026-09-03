@@ -82,6 +82,7 @@ BREW_TOOLS=(
   ast-grep        # AST-aware find/replace — won't touch strings/comments
   biome           # fast JS/TS lint+format inside configured projects
   yq              # jq for YAML/TOML/XML
+  bun             # TS runtime for the unified bash-gate hook (brew: oven-sh/bun)
   gitleaks        # secrets scanner — commit/push gate
   ruff            # Python lint+format — syntax gate for the post-edit hook (9.6ms)
   taplo           # TOML checker/formatter — syntax gate (9.1ms)
@@ -145,6 +146,9 @@ fi
 
 # ─── Optional MCP binaries (Claude Code extras) ──────────
 
+if [ -d "$HOME/.claude/hooks" ] && command -v bun >/dev/null 2>&1; then
+  (cd "$HOME/.claude/hooks" && bun install) 2>/dev/null || warn "bun install failed for hooks (shell-quote dep)"
+fi
 if command -v npm >/dev/null 2>&1; then
   if command -v chrome-devtools-mcp >/dev/null 2>&1; then
     echo "  ✓ chrome-devtools-mcp (already installed)"

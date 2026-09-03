@@ -98,34 +98,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash $HOME/.claude/hooks/edit-enforce.sh"
+            "command": "bun $HOME/.claude/hooks/bash-gate.ts"
           }
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "bash $HOME/.claude/hooks/secrets-gate.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash $HOME/.claude/hooks/skill-install-gate.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash $HOME/.claude/hooks/tool-enforce.sh"
+            "command": "bash $HOME/.claude/hooks/config-guard.sh"
           }
         ]
       }
