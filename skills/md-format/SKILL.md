@@ -18,7 +18,7 @@ prettier --write --prose-wrap preserve "docs/**/*.md"
 - **GFM is the default** target: tables, task lists, strikethrough, autolinks, fenced code with language tags. Write for GitHub rendering.
 - **Tables**: only when the data is genuinely tabular (2+ columns, comparable rows). One-liner pairs → a list. Wide tables (5+ cols) often read better as definition lists or headed sections — GitHub doesn't wrap table cells.
 - **Column width**: keep header cells short; long cells in a column mean the table fights the formatter's alignment.
-- **Code fences**: always tag the language (`bash, `ts). Untagged blocks lose highlighting.
+- **Code fences**: always tag the language (```bash, ```ts). Untagged blocks lose highlighting.
 - **Headings**: one H1 per file, no level skips (H1→H3 is broken anchoring). Headings are the anchor API — `#-Pattern` links depend on exact casing.
 - **Lists**: `-` bullets; parallel capitalization; no trailing `.` on fragments, `.` on full sentences — pick one per list.
 - **Emphasis**: `*italic*`, `**bold**`; underscores read as code in some renderers around words.

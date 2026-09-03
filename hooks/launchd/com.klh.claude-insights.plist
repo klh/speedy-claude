@@ -17,9 +17,9 @@
         <integer>43</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>/Users/kk/.claude/insights/launchd-stdout.log</string>
+    <string>/Users/kk/.claude-insights/launchd-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/kk/.claude/insights/launchd-stderr.log</string>
+    <string>/Users/kk/.claude-insights/launchd-stderr.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>

@@ -40,7 +40,7 @@ difft references/openapi.json /tmp/dinero-spec-new.json        # eller: jq -S . 
 # ændret? → erstat references/openapi.json, opdater dato ovenfor, noter breaking changes her
 ```
 
-## Intern API-oversigt (org 408818 eksempel)
+## Intern API-oversigt (org {orgId} eksempel)
 
 | Handling                                        | Endpoint                                                                                                                                                                           |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

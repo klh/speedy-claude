@@ -58,26 +58,28 @@ Tested on a real codebase (733 TypeScript files, ~2500 total files, Apple M-seri
 
 **Why the enforcement exists:** `cat` is auto-allowed by the harness, so shell heredoc writes were the model's prompt-dodging workaround — every one of them invisible to diffs and unchecked. Denying the pattern and making Edit/Write prompt-free removes both the failure mode _and_ the incentive.
 
-## Hooks
+## Hooks — one entrypoint
 
-| Hook                    | Event                             | Effect                                                                                                                                                                            |
-| ----------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `session-start.sh`      | SessionStart                      | One-line pointer (skills list is already in the system prompt — no full SKILL.md injection)                                                                                       |
-| `tool-enforce.sh`       | PreToolUse/Bash                   | Non-blocking nudge toward fast tools (`ls → eza`, `find → fd`, …). Low-noise: skips git subcommands, mid-pipe use, version probes                                                 |
-| `edit-enforce.sh`       | PreToolUse/Bash                   | **Denies** shell file-writes (cat redirects, `sed -i`, `perl -i`), **nudges** interpreter-heredoc rewriters and `echo >` content generation. Exempts `/tmp`, `$TMPDIR`, `/dev/*`  |
-| `syntax-check.sh`       | PostToolUse/Edit\|Write           | Instant parse check of the edited file; failures returned to the agent to fix immediately                                                                                         |
-| `skill-install-gate.sh` | PreToolUse/Bash                   | **Denies** third-party skill/plugin/MCP installs unless `--security-reviewed` is present — earned only via the `skill-security-review` skill (exfiltration/injection/fraud audit) |
-| `md-format.sh`          | PostToolUse/Edit\|Write (.md)     | Auto-formats markdown with prettier — GFM table alignment, list markers, fence style; prose preserved                                                                             |
-| `secrets-gate.sh`       | PreToolUse/Bash (git commit/push) | gitleaks scan of staged content and outgoing history — deny on findings; `--no-verify` is the explicit human override                                                             |
-| `stop-gate.sh`          | Stop                              | The claim-done gate: re-runs syntax gates over changed files + conflict-marker check before the turn may end                                                                      |
+All gates live behind a single dispatcher: `bun hooks/gate.ts <event>` —
+shell-quote AST parsing (quoting tricks, env prefixes, redirects are
+structural, not regex-matched), argument-array spawns, shared contracts in
+`lib/hookio.ts`.
 
-Register them via `settings.example.json` (below).
+| Event | Gates |
+|-------|-------|
+| `pre-bash` | secrets (gitleaks staged/history) · edit-enforce (shell file-writes) · skill-install · fast-tool nudges |
+| `pre-files` | config-guard: control-plane writes (hooks/settings/skills/agents) require YOUR approval |
+| `post-files` | syntax gates (esbuild/ruff/jq/yq/taplo/zsh -n/sass) + markdown prettier — one process per edit |
+| `stop` | claim-done gate: re-verifies changed files before the turn ends |
+| `session` | skills pointer + insights inbox surfacing |
+
+Register via `settings.example.json`.
 
 ## Autonomy settings
 
 `settings.example.json` is a ready template: GLM/z.ai (or any Anthropic-compatible) env vars, `acceptEdits`, an evidence-based allowlist (fast CLI tools + `npm test`/`dotnet test`/`git fetch`/`npx tsc --noEmit`), and deny guardrails (`sudo rm`, force-push, `rm -rf ~/*`). Copy to `~/.claude/settings.json`, fill the token, adjust to your stack.
 
-## Skills — 49 active (base set + klh-* variants + audited registry adds)
+## Skills — 37 active (klh-* variants + audited registry adds)
 
 A 2026-09 audit (`skillUsage` telemetry across months of sessions) found ~half the original skill pack was never invoked — pure context cost in every session. The active set is curated; the rest are parked in [`skills-available/`](skills-available/README.md) with a restore command (`git mv skills-available/<name> skills/`). Parked skills cost zero context.
 

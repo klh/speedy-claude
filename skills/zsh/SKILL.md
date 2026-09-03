@@ -1,6 +1,6 @@
 ---
 name: zsh
-description: Practical Zsh shell, completion system, ZLE keybindings, and scripting guidance. Use when the agent needs to work with `zsh`, `.zshrc`/.zshenv`/`.zprofile` startup files, shell builtins, `setopt`/`unsetopt` options, globbing and glob qualifiers, `compinit` completion system, ZLE widgets and keybindings, `zparseopts` flag parsing, `autoload` lazy loading, `zcompile` bytecode compilation, `emulate` mode switching, `zmodload` modules, and macOS system zsh or oh-my-zsh/prezto interop.
+description: Zsh configuration and scripting: startup files (.zshrc/.zshenv/.zprofile), setopt options, globbing and glob qualifiers, compinit completions, ZLE widgets/keybindings, zparseopts, autoload/zcompile. Use when the agent needs to read, debug, or edit zsh config or scripts, or interop with oh-my-zsh/prezto.
 ---
 
 # Zsh

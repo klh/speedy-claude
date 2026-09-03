@@ -142,5 +142,9 @@
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bun $HOME/.claude/statusline.ts"
   }
 }
