@@ -82,6 +82,7 @@ BREW_TOOLS=(
   ast-grep        # AST-aware find/replace — won't touch strings/comments
   biome           # fast JS/TS lint+format inside configured projects
   yq              # jq for YAML/TOML/XML
+  gitleaks        # secrets scanner — commit/push gate
   ruff            # Python lint+format — syntax gate for the post-edit hook (9.6ms)
   taplo           # TOML checker/formatter — syntax gate (9.1ms)
 )

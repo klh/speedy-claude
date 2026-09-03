@@ -2,7 +2,7 @@
 description: Implement the next task incrementally — build, test, verify, commit
 ---
 
-Invoke the agent-skills:incremental-implementation skill alongside agent-skills:test-driven-development.
+Invoke the klh-systematic-debugging skill if anything breaks; use ast-grep for identifier-shaped changes and sd/ambr for mechanical ones.
 
 Pick the next pending task from the plan. For each task:
 
@@ -11,8 +11,8 @@ Pick the next pending task from the plan. For each task:
 3. Write a failing test for the expected behavior (RED)
 4. Implement the minimum code to pass the test (GREEN)
 5. Run the full test suite to check for regressions
-6. Run the build to verify compilation
-7. Commit with a descriptive message
+6. Run the build/typecheck to verify compilation (`npx tsc --noEmit` / `dotnet build`)
+7. Commit with a descriptive message (gitleaks scans staged content — rotate anything it flags)
 8. Mark the task complete and move to the next one
 
-If any step fails, follow the agent-skills:debugging-and-error-recovery skill.
+Cadence rules: verify every 3rd edit to the same file (run/build then, not after the 5th). More than 5 planned changes to one file = re-read once, single whole-file Write. Every edit is syntax-checked automatically post-write; fix reported errors before continuing.

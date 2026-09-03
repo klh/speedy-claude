@@ -7,7 +7,8 @@
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
     "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-5.2[1m]",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-5.3-flash[1m]",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-5.3[1m]"
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-5.3[1m]",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku"
   },
   "model": "opus[1m]",
   "effortLevel": "xhigh",
@@ -20,6 +21,8 @@
       "Bash(ambs:*)",
       "Bash(aria2c:*)",
       "Bash(ast-grep:*)",
+      "Bash(awk:*)",
+      "Bash(az account show:*)",
       "Bash(bat:*)",
       "Bash(batdiff:*)",
       "Bash(batgrep:*)",
@@ -30,43 +33,52 @@
       "Bash(delta:*)",
       "Bash(difft:*)",
       "Bash(doggo:*)",
+      "Bash(dotnet test)",
+      "Bash(dotnet test:*)",
       "Bash(dust:*)",
       "Bash(eza:*)",
       "Bash(fd:*)",
       "Bash(fswatch:*)",
       "Bash(gh:*)",
+      "Bash(git fetch:*)",
+      "Bash(gitleaks:*)",
       "Bash(hurl:*)",
       "Bash(hyperfine:*)",
       "Bash(jq:*)",
       "Bash(lazygit:*)",
       "Bash(mkcert:*)",
+      "Bash(npm test)",
+      "Bash(npm test:*)",
+      "Bash(npx tsc --noEmit:*)",
+      "Bash(prettier:*)",
       "Bash(procs:*)",
       "Bash(qlty:*)",
       "Bash(rg:*)",
       "Bash(sd:*)",
-      "Bash(sg:*)",
       "Bash(serve:*)",
+      "Bash(sg:*)",
       "Bash(shellcheck:*)",
+      "Bash(sort:*)",
       "Bash(tokei:*)",
       "Bash(tree:*)",
+      "Bash(uniq:*)",
       "Bash(watchexec:*)",
       "Bash(xcp:*)",
       "Bash(xh:*)",
       "Bash(yq:*)",
-      "Bash(zoxide:*)",
-      "Bash(npm test)",
-      "Bash(npm test:*)",
-      "Bash(dotnet test)",
-      "Bash(dotnet test:*)",
-      "Bash(git fetch:*)",
-      "Bash(npx tsc --noEmit:*)",
-      "Bash(az account show:*)"
+      "Bash(zoxide:*)"
     ],
     "deny": [
       "Bash(sudo rm:*)",
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",
       "Bash(rm -rf ~/*)"
+    ],
+    "ask": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/credentials*)",
+      "Read(**/*.pem)"
     ]
   },
   "hooks": {
@@ -87,6 +99,15 @@
           {
             "type": "command",
             "command": "bash $HOME/.claude/hooks/edit-enforce.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/secrets-gate.sh"
           }
         ]
       },
@@ -125,6 +146,16 @@
           {
             "type": "command",
             "command": "bash $HOME/.claude/hooks/syntax-check.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/stop-gate.sh"
           }
         ]
       }

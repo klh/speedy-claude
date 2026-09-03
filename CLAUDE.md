@@ -17,6 +17,8 @@
 - Bulk mechanical replaces: `sd` / `ambr` (fast, blessed). Identifier/structure-shaped changes: `ast-grep`. Semantic multi-file changes: Edit per file.
 - Capturing **command output** to a file (`xh ... > resp.json`) is fine; generating file *content* through the shell is not.
 - After any structural edit, fix syntax errors reported by the PostToolUse check before moving on.
+- **Verify every 3rd edit** to the same file: run/build/test it then, not after the 5th (observed failure mode: five blind edits, then the first run crashes).
+- **>5 planned changes to one file** = re-read once and do a single whole-file Write, not 3 Reads + 7 Edits of churn.
 - Markdown is auto-formatted on every save (`md-format.sh` → prettier, GFM, prose preserved). Do not hand-align tables — write them loosely and let the formatter tidy; re-read after bulk writes.
 
 ## Structural Editing & Linting
@@ -353,7 +355,7 @@ RIGHT: npm test && qlty check && difft main...HEAD
 
 ## Available Skills Quick Reference
 
-47 active skills (base + klh-* variants + audited registry adds; unused ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
+49 active skills (base + klh-* variants + audited registry adds; unused ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
 
 ### Editing & Code Intelligence
 
@@ -366,6 +368,8 @@ RIGHT: npm test && qlty check && difft main...HEAD
 | `docker` | ANY container work — Dockerfile/compose authoring, debugging, networking, Buildx |
 | `az` | Azure CLI auth checks, subscription context, resource/deployment lookups |
 | `sqlite` | SQLite queries (read-only safe scripts), backups, health checks, diffing |
+| `zod-openapi` | Publish API contracts FROM zod validators (JSON Schema → OpenAPI → Postman) |
+| `md-format` | Markdown conventions — GFM-first; formatting is automatic via hook |
 | `sql-best-practice` | Idiomatic SQL review, schema work, query tuning |
 | `csharp-best-practice` / `csharp-docstrings` | Idiomatic C# review + XML doc comments (.NET repos) |
 | `klh-openapi-directory-first` | Working with ANY public API — check openapi-directory before training data or web search |

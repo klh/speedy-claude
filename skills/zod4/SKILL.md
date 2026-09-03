@@ -11,18 +11,46 @@ Zod 4 is a major release with significant performance improvements, reduced Type
 
 Before diving deep, address these high-impact breaking changes:
 
-| Change | Zod 3 | Zod 4 |
-|--------|-------|-------|
-| Record schemas | `z.record(z.string())` | `z.record(z.string(), z.string())` |
-| Strict objects | `.strict()` | `z.strictObject({...})` |
-| Passthrough | `.passthrough()` | `z.looseObject({...})` |
-| Error formatting | `err.format()` | `z.treeifyError(err)` |
-| Coerce input type | `string` | `unknown` |
+| Change            | Zod 3                  | Zod 4                              |
+| ----------------- | ---------------------- | ---------------------------------- |
+| Record schemas    | `z.record(z.string())` | `z.record(z.string(), z.string())` |
+| Strict objects    | `.strict()`            | `z.strictObject({...})`            |
+| Passthrough       | `.passthrough()`       | `z.looseObject({...})`             |
+| Error formatting  | `err.format()`         | `z.treeifyError(err)`              |
+| Coerce input type | `string`               | `unknown`                          |
 
 Install Zod 4:
+
 ```bash
-npm install zod@^4.0.0
+npm install zod@^4.5.0
 ```
+
+---
+
+## Zod 4.5 (current)
+
+### z.compile() — the headline feature
+
+Pre-compile any schema for hot paths: **3–9x faster parsing, up to 9x less memory per schema**.
+
+```typescript
+import { z } from "zod";
+
+const UserSchema = z.object({ id: z.string(), email: z.string().email() });
+const CompiledUser = z.compile(UserSchema); // returns a drop-in schema
+
+CompiledUser.parse(payload); // same API, compiled fast-path
+```
+
+Use for: request validators, per-message parsers, anything parsing in a loop. Compile once at module init. Un-compiled schemas behave as before — no pressure to compile cold paths.
+
+### JSON Schema conversion matured
+
+First-party `z.toJSONSchema()` (introduced in 4.0) got correctness fixes in 4.5 — notably falsy `prefault` values and several conversion soundness fixes. See the `zod-openapi` skill for the full schema-boundary workflow (JSON Schema → OpenAPI → Postman).
+
+### Stricter soundness fixes — check on upgrade
+
+4.5 ships "potentially breaking bug fixes": some validations are now stricter. When bumping 4.x → 4.5, re-run the test suite against edge-case fixtures (empty strings, falsy defaults, `undefined` inputs) rather than assuming a minor bump is free.
 
 For detailed breaking changes, see [./reference/breaking-changes.md](./reference/breaking-changes.md).
 
@@ -58,14 +86,16 @@ In Zod 4, `.default()` short-circuits if input is `undefined` and returns the de
 
 ```typescript
 // Zod 4: default must match OUTPUT type
-const schema = z.string()
-  .transform(val => val.length)
-  .default(0);  // Returns 0 directly, not parsed
+const schema = z
+  .string()
+  .transform((val) => val.length)
+  .default(0); // Returns 0 directly, not parsed
 
 // To parse the default (old behavior):
-const schema = z.string()
-  .transform(val => val.length)
-  .prefault("tuna");  // "tuna" is parsed → 4
+const schema = z
+  .string()
+  .transform((val) => val.length)
+  .prefault("tuna"); // "tuna" is parsed → 4
 ```
 
 ### 4. Error Handling Changes
@@ -79,7 +109,7 @@ const flat = err.flatten();
 const tree = z.treeifyError(err);
 
 // Adding issues
-err.issues.push({ /* new issue */ });
+err.issues.push({/* new issue */});
 ```
 
 ### 5. z.coerce Input Type
@@ -98,9 +128,10 @@ type Input = z.input<typeof schema>;
 ### z.file() - File Validation
 
 ```typescript
-const fileSchema = z.file()
-  .min(10_000)        // minimum bytes
-  .max(1_000_000)     // maximum bytes
+const fileSchema = z
+  .file()
+  .min(10_000) // minimum bytes
+  .max(1_000_000) // maximum bytes
   .mime(["image/png", "image/jpeg"]);
 ```
 
@@ -110,11 +141,7 @@ const fileSchema = z.file()
 const css = z.templateLiteral([z.number(), z.enum(["px", "em", "rem"])]);
 // `${number}px` | `${number}em` | `${number}rem`
 
-const email = z.templateLiteral([
-  z.string().min(1),
-  "@",
-  z.string().max(64),
-]);
+const email = z.templateLiteral([z.string().min(1), "@", z.string().max(64)]);
 ```
 
 ### .meta() - Schema Metadata
@@ -124,7 +151,7 @@ z.string().meta({
   id: "email_address",
   title: "Email address",
   description: "User's email",
-  examples: ["user@example.com"]
+  examples: ["user@example.com"],
 });
 ```
 
@@ -134,7 +161,7 @@ z.string().meta({
 z.globalRegistry.add(mySchema, {
   id: "user_schema",
   title: "User",
-  description: "User data structure"
+  description: "User data structure",
 });
 ```
 
@@ -144,7 +171,7 @@ z.globalRegistry.add(mySchema, {
 import { z } from "zod";
 import { en } from "zod/locales/en";
 
-z.config(z.locales.en());  // Configure error messages
+z.config(z.locales.en()); // Configure error messages
 ```
 
 ### z.strictObject() / z.looseObject()
@@ -173,7 +200,7 @@ const schema = z.pipe(
   z.string(),
   z.minLength(1),
   z.maxLength(100),
-  z.regex(/^[a-z]+$/)
+  z.regex(/^[a-z]+$/),
 );
 
 // Available functions
@@ -196,12 +223,13 @@ z.toUpperCase();
 ### Pattern 1: Update z.record() Calls
 
 Search and replace:
+
 ```typescript
 // Find
-z.record(valueSchema)
+z.record(valueSchema);
 
 // Replace with
-z.record(z.string(), valueSchema)
+z.record(z.string(), valueSchema);
 ```
 
 ### Pattern 2: Update Strict Objects
@@ -242,12 +270,18 @@ If using `.default()` with transforms, check if default matches output type:
 
 ```typescript
 // If this breaks:
-z.string().transform(s => s.length).default("hello")
+z.string()
+  .transform((s) => s.length)
+  .default("hello");
 
 // Change to:
-z.string().transform(s => s.length).prefault("hello")
+z.string()
+  .transform((s) => s.length)
+  .prefault("hello");
 // OR
-z.string().transform(s => s.length).default(5)  // Match output type
+z.string()
+  .transform((s) => s.length)
+  .default(5); // Match output type
 ```
 
 For complete migration checklist, see [./reference/migration-checklist.md](./reference/migration-checklist.md).
@@ -256,12 +290,12 @@ For complete migration checklist, see [./reference/migration-checklist.md](./ref
 
 ## Common Issues
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `Expected 2 arguments, got 1` | `z.record()` single arg | Add key schema: `z.record(z.string(), ...)` |
-| `Property 'strict' does not exist` | `.strict()` removed | Use `z.strictObject()` |
-| `Property 'format' does not exist` | `.format()` removed | Use `z.treeifyError(err)` |
-| Type mismatch on `.default()` | Default must match output | Use `.prefault()` or fix default type |
+| Error                              | Cause                     | Fix                                         |
+| ---------------------------------- | ------------------------- | ------------------------------------------- |
+| `Expected 2 arguments, got 1`      | `z.record()` single arg   | Add key schema: `z.record(z.string(), ...)` |
+| `Property 'strict' does not exist` | `.strict()` removed       | Use `z.strictObject()`                      |
+| `Property 'format' does not exist` | `.format()` removed       | Use `z.treeifyError(err)`                   |
+| Type mismatch on `.default()`      | Default must match output | Use `.prefault()` or fix default type       |
 
 ---
 

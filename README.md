@@ -68,6 +68,8 @@ Tested on a real codebase (733 TypeScript files, ~2500 total files, Apple M-seri
 | `syntax-check.sh` | PostToolUse/Edit\|Write | Instant parse check of the edited file; failures returned to the agent to fix immediately |
 | `skill-install-gate.sh` | PreToolUse/Bash | **Denies** third-party skill/plugin/MCP installs unless `--security-reviewed` is present — earned only via the `skill-security-review` skill (exfiltration/injection/fraud audit) |
 | `md-format.sh` | PostToolUse/Edit\|Write (.md) | Auto-formats markdown with prettier — GFM table alignment, list markers, fence style; prose preserved |
+| `secrets-gate.sh` | PreToolUse/Bash (git commit/push) | gitleaks scan of staged content and outgoing history — deny on findings; `--no-verify` is the explicit human override |
+| `stop-gate.sh` | Stop | The claim-done gate: re-runs syntax gates over changed files + conflict-marker check before the turn may end |
 
 Register them via `settings.example.json` (below).
 
@@ -75,7 +77,7 @@ Register them via `settings.example.json` (below).
 
 `settings.example.json` is a ready template: GLM/z.ai (or any Anthropic-compatible) env vars, `acceptEdits`, an evidence-based allowlist (fast CLI tools + `npm test`/`dotnet test`/`git fetch`/`npx tsc --noEmit`), and deny guardrails (`sudo rm`, force-push, `rm -rf ~/*`). Copy to `~/.claude/settings.json`, fill the token, adjust to your stack.
 
-## Skills — 47 active (base set + klh-* variants + audited registry adds)
+## Skills — 49 active (base set + klh-* variants + audited registry adds)
 
 A 2026-09 audit (`skillUsage` telemetry across months of sessions) found ~half the original skill pack was never invoked — pure context cost in every session. The active set is curated; the rest are parked in [`skills-available/`](skills-available/README.md) with a restore command (`git mv skills-available/<name> skills/`). Parked skills cost zero context.
 
