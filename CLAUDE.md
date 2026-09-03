@@ -347,6 +347,7 @@ RIGHT: npm test && qlty check && difft main...HEAD
 - **Modular, DRY** — within sanity, not extremist. Extract a shared helper on the second duplicate, not the first; stop abstracting when it hurts readability.
 - **Event mediator / composition over inheritance.** Prefer emitting/subscribing to events (Lit events, EventTarget, pub-sub) over base-class extension chains.
 - **Close to the metal over abstraction.** Lit / native web components over React-class frameworks; platform APIs over wrappers; fewer layers between code and the runtime.
+- **React/Vue are maintenance-only.** Existing React repos (e.g. tredebanken-v2) get idiomatic React work — follow their patterns, no rewrites. NEVER introduce React/Vue-class frameworks to greenfield or to repos that do not already use them; new UI defaults to Lit/native web components.
 - Prefer boring, inspectable code. One obvious way through a module; explicit data flow; no magic.
 
 ## Available Skills Quick Reference
