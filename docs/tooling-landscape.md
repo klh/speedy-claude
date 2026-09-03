@@ -84,4 +84,4 @@ so bodies stay lean: role, method, output contract, verify, one example.
   over lint-staged's stash model.
 - The daily performance-review loop: launchd `com.klh.claude-insights` runs a
   headless `claude -p` analyst at 06:43 with no session open; findings land in
-  `~/.claude/insights/` and surface at the next session start.
+  `~/.claude-insights/` and surface at the next session start.
