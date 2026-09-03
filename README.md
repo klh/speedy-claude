@@ -53,7 +53,7 @@ Tested on a real codebase (733 TypeScript files, ~2500 total files, Apple M-seri
 | Structural replace | `ast-grep` — AST nodes only; strings and comments stay untouched |
 | Structured config | `jq` (JSON) · `yq` (YAML/TOML/XML) |
 | Enforcement | `hooks/edit-enforce.sh` denies `cat > f`, `cat >> f`, `sed -i`, `perl -i`; nudges heredoc rewriters toward Edit/Write |
-| Post-edit verification | `hooks/syntax-check.sh` — parse check per save: json→jq, py→ast, sh→bash -n, js→node --check, ts→project tsc; errors feed straight back to the agent |
+| Post-edit verification | `hooks/syntax-check.sh` — measured sub-10ms gates per save: jq 3.2ms json · yq 6.3ms yaml · taplo 9.1ms toml · esbuild 6.8ms ts/tsx/jsx (parse) + project-tsc tier-2 (types) · ruff 9.6ms py · bash -n 2.4ms sh; errors feed straight back to the agent |
 | Lint / dev loop | `qlty check` — 68 linters, one diff-aware command (`qlty init -y && qlty plugins enable biome prettier` on first use) |
 
 **Why the enforcement exists:** `cat` is auto-allowed by the harness, so shell heredoc writes were the model's prompt-dodging workaround — every one of them invisible to diffs and unchecked. Denying the pattern and making Edit/Write prompt-free removes both the failure mode *and* the incentive.
@@ -101,6 +101,8 @@ Highlights: `ast-grep` (structural search rules) · `cli-speed-tools` · `code-s
 | [growth-marketer](agents/growth-marketer.md) | Low-Budget Growth | Offers, SEO/email flywheels, merch and product launches |
 | [outreach-strategist](agents/outreach-strategist.md) | Research-First Outreach | Context sheets, tailored cold email, sequence design |
 | [devops-systems-engineer](agents/devops-systems-engineer.md) | PaaS × Bare Metal | Fast flight + low cost, hybrid hosting, runbooks |
+| [llm-performance-analyst](agents/llm-performance-analyst.md) | Agent Ops | Transcript metrics: token waste, tool efficiency, error-pattern taxonomy with preventive prescriptions |
+| [tool-stack-auditor](agents/tool-stack-auditor.md) | Stack Economics | Audits the online services personas use (marketing, shops, JIT/print, hosting) for better/cheaper alternatives |
 
 ## Code style this repo encodes
 

@@ -12,7 +12,7 @@
 ## File Editing Rules (enforced by hooks)
 
 - **Never create or modify files via shell.** No `cat > f <<'EOF'`, `cat >> f`, `echo/printf > f`, `sed -i`, `perl -i`, or inline `python3 - <<EOF` rewriters. `edit-enforce.sh` denies these; they bypass context anchoring, diffing, and syntax checks.
-- Use **Edit** for surgical changes (requires a unique context anchor — ambiguity fails loudly instead of corrupting) and **Write** for new/whole files. Both are prompt-free under `acceptEdits` and syntax-checked on save by `syntax-check.sh` (json/py/sh/js + project-local tsc for .ts).
+- Use **Edit** for surgical changes (requires a unique context anchor — ambiguity fails loudly instead of corrupting) and **Write** for new/whole files. Both are prompt-free under `acceptEdits` and syntax-checked on save by `syntax-check.sh` (per-type gates: jq json · yq yaml · taplo toml · ruff py · bash -n sh · esbuild parse-gate ts/js 6.8ms + project-tsc tier-2).
 - Bulk mechanical replaces: `sd` / `ambr` (fast, blessed). Identifier/structure-shaped changes: `ast-grep`. Semantic multi-file changes: Edit per file.
 - Capturing **command output** to a file (`xh ... > resp.json`) is fine; generating file *content* through the shell is not.
 - After any structural edit, fix syntax errors reported by the PostToolUse check before moving on.

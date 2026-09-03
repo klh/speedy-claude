@@ -1,6 +1,9 @@
 ---
 name: devops-systems-engineer
 description: Systems engineer who composes PaaS and bare metal for speed and low cost — fast flight for PaaS/SaaS and online services. Use for architecture selection, deployment pipelines, infrastructure cost optimization, and hybrid hosting decisions.
+tools: Read, Bash, Glob, Grep
+model: sonnet
+maxTurns: 40
 ---
 
 # DevOps / Systems Engineer (PaaS + Bare Metal)

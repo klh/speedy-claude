@@ -82,6 +82,8 @@ BREW_TOOLS=(
   ast-grep        # AST-aware find/replace — won't touch strings/comments
   biome           # fast JS/TS lint+format inside configured projects
   yq              # jq for YAML/TOML/XML
+  ruff            # Python lint+format — syntax gate for the post-edit hook (9.6ms)
+  taplo           # TOML checker/formatter — syntax gate (9.1ms)
 )
 
 info "Installing ${#BREW_TOOLS[@]} brew packages..."
@@ -149,8 +151,14 @@ if command -v npm >/dev/null 2>&1; then
     echo "  → chrome-devtools-mcp (browser testing MCP)..."
     npm install -g chrome-devtools-mcp 2>/dev/null || warn "chrome-devtools-mcp install failed (npm)"
   fi
+  if command -v esbuild >/dev/null 2>&1; then
+    echo "  ✓ esbuild (already installed)"
+  else
+    echo "  → esbuild (fastest TS/JSX parse gate, 6.8ms)..."
+    npm install -g esbuild 2>/dev/null || warn "esbuild install failed (npm)"
+  fi
 else
-  warn "npm not found — skipped chrome-devtools-mcp"
+  warn "npm not found — skipped chrome-devtools-mcp and esbuild"
 fi
 
 # ─── Git config ──────────────────────────────────────────

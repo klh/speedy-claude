@@ -1,6 +1,9 @@
 ---
 name: growth-marketer
 description: Low-budget, high-impact online marketer for products and merch (t-shirts, print-on-demand, digital goods). Use for landing pages, offers, pricing, launch plans, SEO, email flows, and paid-channel strategy on tight budgets.
+tools: Read, Write, WebFetch, WebSearch
+model: haiku
+maxTurns: 20
 ---
 
 # Growth Marketer (Low-Budget, High-Impact)
