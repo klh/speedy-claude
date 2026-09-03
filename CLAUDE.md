@@ -370,24 +370,24 @@ RIGHT: npm test && qlty check && difft main...HEAD
 
 ## Available Skills Quick Reference
 
-49 active skills (base + klh-* variants + audited registry adds; unused ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
+35 active skills (base + klh-* variants + audited registry adds; unused ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
 
 ### Editing & Code Intelligence
 
-| Skill                                        | When to use                                                                              |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `klh-cli-speed-tools`                        | ANY terminal file operation — listing, searching, reading files                          |
-| `klh-code-simplifier`                        | Simplifying, refactoring, or cleaning up existing code                                   |
-| `klh-find-bugs`                              | Reviewing changes for bugs, security vulnerabilities, code quality                       |
-| `ast-grep`                                   | Writing ast-grep rules for structural code search/rewrite beyond text search             |
-| `docker`                                     | ANY container work — Dockerfile/compose authoring, debugging, networking, Buildx         |
-| `az`                                         | Azure CLI auth checks, subscription context, resource/deployment lookups                 |
-| `sqlite`                                     | SQLite queries (read-only safe scripts), backups, health checks, diffing                 |
-| `zod-openapi`                                | Publish API contracts FROM zod validators (JSON Schema → OpenAPI → Postman)              |
-| `md-format`                                  | Markdown conventions — GFM-first; formatting is automatic via hook                       |
-| `sql-best-practice`                          | Idiomatic SQL review, schema work, query tuning                                          |
-| `csharp-best-practice` / `csharp-docstrings` | Idiomatic C# review + XML doc comments (.NET repos)                                      |
-| `klh-openapi-directory-first`                | Working with ANY public API — check openapi-directory before training data or web search |
+| Skill                         | When to use                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `klh-cli-speed-tools`         | ANY terminal file operation — listing, searching, reading files                          |
+| `klh-code-simplifier`         | Simplifying, refactoring, or cleaning up existing code                                   |
+| `klh-find-bugs`               | Reviewing changes for bugs, security vulnerabilities, code quality                       |
+| `ast-grep`                    | Writing ast-grep rules for structural code search/rewrite beyond text search             |
+| `docker`                      | ANY container work — Dockerfile/compose authoring, debugging, networking, Buildx         |
+| `az`                          | Azure CLI auth checks, subscription context, resource/deployment lookups                 |
+| `sqlite`                      | SQLite queries (read-only safe scripts), backups, health checks, diffing                 |
+| `zsh`                         | Reading/debugging/editing zsh config or scripts — setopt, globbing, ZLE, compinit        |
+| `md-format`                   | Markdown conventions — GFM-first; formatting is automatic via hook                       |
+| `sql-best-practice`           | Idiomatic SQL review, schema work, query tuning                                          |
+| `csharp-best-practice`        | Idiomatic C# review — conventions, structure, testing, tooling (.NET repos)              |
+| `klh-openapi-directory-first` | Working with ANY public API — check openapi-directory before training data or web search |
 
 ### Frontend & UI
 
@@ -399,11 +399,11 @@ RIGHT: npm test && qlty check && difft main...HEAD
 
 ### Validation & Testing
 
-| Skill                     | When to use                                     |
-| ------------------------- | ----------------------------------------------- |
-| `klh-zod-validation`      | Validating API inputs and data with Zod schemas |
-| `zod4`                    | Using Zod 4 schema validation library           |
-| `test-driven-development` | Before implementing ANY feature or bugfix       |
+| Skill                     | When to use                                                                              |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| `klh-zod-validation`      | Zod runtime validation + deriving JSON Schema/OpenAPI/Postman contracts from zod schemas |
+| `zod4`                    | Using Zod 4 schema validation library                                                    |
+| `test-driven-development` | Before implementing ANY feature or bugfix                                                |
 
 ### Debugging & Planning
 
@@ -415,14 +415,14 @@ RIGHT: npm test && qlty check && difft main...HEAD
 
 ### Docs & Setup
 
-| Skill                         | When to use                                                           |
-| ----------------------------- | --------------------------------------------------------------------- |
-| `klh-agents-md`               | Creating/maintaining AGENTS.md / CLAUDE.md agent docs                 |
-| `klh-project-memory`          | Setting up structured project memory in docs/project_notes/           |
-| `klh-settings-audit`          | Auditing/generating a project's Claude Code settings.json permissions |
-| `skill-lookup`                | Search and install skills from the prompts.chat registry              |
-| `find-skills`                 | Discover and install agent skills                                     |
-| `git-workflow-and-versioning` | Committing, branching, organizing parallel work streams               |
+| Skill                         | When to use                                                                             |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| `klh-agents-md`               | Creating/maintaining AGENTS.md / CLAUDE.md agent docs                                   |
+| `klh-project-memory`          | Setting up structured project memory in docs/project_notes/                             |
+| `klh-settings-audit`          | Auditing/generating a project's Claude Code settings.json permissions                   |
+| `skill-lookup`                | Search and install skills from the prompts.chat registry                                |
+| `skill-security-review`       | Mandatory security audit BEFORE installing any third-party skill, plugin, or MCP server |
+| `git-workflow-and-versioning` | Committing, branching, organizing parallel work streams                                 |
 
 ### klh-* variants & workflow skills
 

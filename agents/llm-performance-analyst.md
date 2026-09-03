@@ -1,6 +1,6 @@
 ---
 name: llm-performance-analyst
-description: Evaluates LLM agent performance from session transcripts — token usage, tool-call efficiency, and error patterns. Diagnoses dumb errors from hasty narrow edits that miss the bigger pattern, and prescribes concrete fixes to CLAUDE.md, hooks, permissions, and skills. Use after long sessions, cost spikes, repeated error loops, or via the daily launchd review.
+description: Evaluates LLM agent performance from session transcripts — token usage, tool-call efficiency, and error patterns. Diagnoses dumb errors from hasty narrow edits that miss the bigger pattern, and prescribes concrete fixes to CLAUDE.md, hooks, permissions, and skills. Scope is agent behavior and agent config only — auditing online services or SaaS subscriptions is tool-stack-auditor's job. Use after long sessions, cost spikes, repeated error loops, or via the daily launchd review.
 tools: Read, Bash, Glob, Grep
 model: opus
 maxTurns: 50

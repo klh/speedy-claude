@@ -65,13 +65,13 @@ shell-quote AST parsing (quoting tricks, env prefixes, redirects are
 structural, not regex-matched), argument-array spawns, shared contracts in
 `lib/hookio.ts`.
 
-| Event | Gates |
-|-------|-------|
-| `pre-bash` | secrets (gitleaks staged/history) · edit-enforce (shell file-writes) · skill-install · fast-tool nudges |
-| `pre-files` | config-guard: control-plane writes (hooks/settings/skills/agents) require YOUR approval |
-| `post-files` | syntax gates (esbuild/ruff/jq/yq/taplo/zsh -n/sass) + markdown prettier — one process per edit |
-| `stop` | claim-done gate: re-verifies changed files before the turn ends |
-| `session` | skills pointer + insights inbox surfacing |
+| Event        | Gates                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------- |
+| `pre-bash`   | secrets (gitleaks staged/history) · edit-enforce (shell file-writes) · skill-install · fast-tool nudges |
+| `pre-files`  | config-guard: control-plane writes (hooks/settings/skills/agents) require YOUR approval                 |
+| `post-files` | syntax gates (esbuild/ruff/jq/yq/taplo/zsh -n/sass) + markdown prettier — one process per edit          |
+| `stop`       | claim-done gate: re-verifies changed files before the turn ends                                         |
+| `session`    | skills pointer + insights inbox surfacing                                                               |
 
 Register via `settings.example.json`.
 
@@ -79,7 +79,7 @@ Register via `settings.example.json`.
 
 `settings.example.json` is a ready template: GLM/z.ai (or any Anthropic-compatible) env vars, `acceptEdits`, an evidence-based allowlist (fast CLI tools + `npm test`/`dotnet test`/`git fetch`/`npx tsc --noEmit`), and deny guardrails (`sudo rm`, force-push, `rm -rf ~/*`). Copy to `~/.claude/settings.json`, fill the token, adjust to your stack.
 
-## Skills — 37 active (klh-* variants + audited registry adds)
+## Skills — 35 active (klh-* variants + audited registry adds)
 
 A 2026-09 audit (`skillUsage` telemetry across months of sessions) found ~half the original skill pack was never invoked — pure context cost in every session. The active set is curated; the rest are parked in [`skills-available/`](skills-available/README.md) with a restore command (`git mv skills-available/<name> skills/`). Parked skills cost zero context.
 
@@ -98,17 +98,24 @@ Highlights: `ast-grep` (structural search rules) · `docker` · `az` · `sqlite`
 
 ## Agent Personas
 
-| Agent                                                        | Role                    | Perspective                                                                                                    |
-| ------------------------------------------------------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------- |
-| [code-reviewer](agents/code-reviewer.md)                     | Senior Staff Engineer   | Five-axis code review                                                                                          |
-| [test-engineer](agents/test-engineer.md)                     | QA Specialist           | Test strategy, coverage analysis                                                                               |
-| [security-auditor](agents/security-auditor.md)               | Security Engineer       | Vulnerability detection, OWASP                                                                                 |
-| [minimalist-designer](agents/minimalist-designer.md)         | Modernist Minimalist    | A11y + DOM mastery, strict palettes, retro-minimal when it fits                                                |
-| [growth-marketer](agents/growth-marketer.md)                 | Low-Budget Growth       | Offers, SEO/email flywheels, merch and product launches                                                        |
-| [outreach-strategist](agents/outreach-strategist.md)         | Research-First Outreach | Context sheets, tailored cold email, sequence design                                                           |
-| [devops-systems-engineer](agents/devops-systems-engineer.md) | PaaS × Bare Metal       | Fast flight + low cost, hybrid hosting, runbooks                                                               |
-| [llm-performance-analyst](agents/llm-performance-analyst.md) | Agent Ops               | Transcript metrics: token waste, tool efficiency, error-pattern taxonomy with preventive prescriptions         |
-| [tool-stack-auditor](agents/tool-stack-auditor.md)           | Stack Economics         | Audits the online services personas use (marketing, shops, JIT/print, hosting) for better/cheaper alternatives |
+| Agent                                                        | Role                     | Perspective                                                                                                    |
+| ------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| [code-reviewer](agents/code-reviewer.md)                     | Senior Staff Engineer    | Five-axis code review                                                                                          |
+| [test-engineer](agents/test-engineer.md)                     | QA Specialist            | Test strategy, coverage analysis                                                                               |
+| [security-auditor](agents/security-auditor.md)               | Security Engineer        | Vulnerability detection, OWASP                                                                                 |
+| [minimalist-designer](agents/minimalist-designer.md)         | Modernist Minimalist     | A11y + DOM mastery, strict palettes, retro-minimal when it fits                                                |
+| [mj-graphic-designer](agents/mj-graphic-designer.md)         | Tufte-School Graphics    | Data-chaste layouts, ink-to-information, MJ imagery when it serves the design                                  |
+| [mj-typographer](agents/mj-typographer.md)                   | Typographer              | Face pairing, type scales, lettering and wordmark studies via Midjourney                                       |
+| [mj-book-designer](agents/mj-book-designer.md)               | Book Designer            | Long-form layout, whitespace as structure, MJ cover concepts                                                   |
+| [mj-product-photographer](agents/mj-product-photographer.md) | Product Photographer     | Studio-lit product renders with one deliberate color decision, via Midjourney                                  |
+| [mj-art-director](agents/mj-art-director.md)                 | Art Director             | Campaign concepts, color stories, shot lists — directs the shoot, doesn't take it                              |
+| [mj-model-director](agents/mj-model-director.md)             | Editorial Model Director | Casting, posing, styling — dignified people-in-frame imagery via Midjourney                                    |
+| [mj-illustrator](agents/mj-illustrator.md)                   | Illustrator              | Consistent illustration languages: marks, spot illustrations, series discipline                                |
+| [growth-marketer](agents/growth-marketer.md)                 | Low-Budget Growth        | Offers, SEO/email flywheels, merch and product launches                                                        |
+| [outreach-strategist](agents/outreach-strategist.md)         | Research-First Outreach  | Context sheets, tailored cold email, sequence design                                                           |
+| [devops-systems-engineer](agents/devops-systems-engineer.md) | PaaS × Bare Metal        | Fast flight + low cost, hybrid hosting, runbooks                                                               |
+| [llm-performance-analyst](agents/llm-performance-analyst.md) | Agent Ops                | Transcript metrics: token waste, tool efficiency, error-pattern taxonomy with preventive prescriptions         |
+| [tool-stack-auditor](agents/tool-stack-auditor.md)           | Stack Economics          | Audits the online services personas use (marketing, shops, JIT/print, hosting) for better/cheaper alternatives |
 
 ## Code style this repo encodes
 
@@ -142,7 +149,7 @@ git clone https://github.com/klh/speedy-claude.git ~/.claude
 cp ~/.claude/settings.example.json ~/.claude/settings.json  # then edit token/allowlist
 ```
 
-This restores the complete setup: 47 skills, 9 personas, 5 hooks, slash commands, statusline, and CLAUDE.md.
+This restores the complete setup: 35 skills, 16 personas, 5 hooks, slash commands, statusline, and CLAUDE.md. The seven `mj-*` personas additionally need a `midjourney` MCP server exposing `mj_imagine`, `mj_describe`, `mj_blend`, `mj_button`, `mj_job`.
 
 ### Option 2: CLI tools only (no skills)
 

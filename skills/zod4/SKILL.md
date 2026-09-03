@@ -46,7 +46,7 @@ Use for: request validators, per-message parsers, anything parsing in a loop. Co
 
 ### JSON Schema conversion matured
 
-First-party `z.toJSONSchema()` (introduced in 4.0) got correctness fixes in 4.5 — notably falsy `prefault` values and several conversion soundness fixes. See the `zod-openapi` skill for the full schema-boundary workflow (JSON Schema → OpenAPI → Postman).
+First-party `z.toJSONSchema()` (introduced in 4.0) got correctness fixes in 4.5 — notably falsy `prefault` values and several conversion soundness fixes. See `klh-zod-validation` ([references/openapi.md](../klh-zod-validation/references/openapi.md)) for the full schema-boundary workflow (JSON Schema → OpenAPI → Postman).
 
 ### Stricter soundness fixes — check on upgrade
 

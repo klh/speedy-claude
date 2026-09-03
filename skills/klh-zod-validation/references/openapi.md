@@ -1,11 +1,6 @@
----
-name: zod-openapi
-description: Schema-boundary sidecar to the zod skills — turn Zod validators into JSON Schema, OpenAPI documents, and Postman-importable specs. Use when a project needs to publish/derive an API contract from its zod schemas, document endpoints, generate OpenAPI for consumers, or round-trip specs (compare vendored API specs). Complements klh-zod-validation (runtime validation) and zod4 (library idioms).
----
-
 # Zod → JSON Schema → OpenAPI → Postman
 
-One source of truth: the zod validators you already run at runtime. Never hand-maintain a second schema.
+Reference for [klh-zod-validation](../SKILL.md): the schema-boundary side of the skill — turning the validators you already run at runtime into published contracts. One source of truth; never hand-maintain a second schema.
 
 ## Tier 1 — JSON Schema (native, zero deps)
 

@@ -1,6 +1,6 @@
 ---
 name: klh-zod-validation
-description: Zod schema validation patterns. Use when validating API inputs and data.
+description: Zod schema validation and contract derivation — runtime validation of API inputs and data, plus turning the same zod validators into JSON Schema, OpenAPI documents, and Postman-importable specs. Use when validating API inputs, parsing env vars, or when a project needs to publish or verify an API contract from its schemas.
 ---
 
 # Zod Validation Skill
@@ -10,9 +10,9 @@ description: Zod schema validation patterns. Use when validating API inputs and 
 
 ## Overview
 
-Zod schema validation patterns for type-safe data validation.
+Zod schema validation patterns for type-safe data validation, plus deriving machine-readable contracts (JSON Schema, OpenAPI, Postman) from the same schemas — one source of truth.
 
-This skill covers Zod schema validation for type-safe data validation.
+This skill covers Zod schema validation for type-safe data validation. Contract derivation lives in [references/openapi.md](references/openapi.md).
 
 ## When to Use
 
@@ -22,6 +22,8 @@ Use this skill when:
 - Parsing environment variables
 - Transforming data
 - Creating type-safe schemas
+- Deriving JSON Schema from schemas (config, docs, tooling)
+- Publishing an OpenAPI document or Postman collection from schemas
 
 ## Core Principle
 
@@ -365,14 +367,26 @@ const CustomerSchema = z.object({
 5. **Safe parse** - Use `safeParse` for graceful errors
 6. **Compose schemas** - Build complex from simple
 
+## Contract Derivation (JSON Schema / OpenAPI / Postman)
+
+The same validators you run at runtime become your published contract — never hand-maintain a second schema.
+
+- **JSON Schema** (config/docs/tooling): `z.toJSONSchema()` — native in Zod ≥4, zero deps
+- **OpenAPI** (REST contracts, public docs): `@asteasolutions/zod-to-openapi` registry pattern
+- **Postman**: import the generated OpenAPI doc — never hand-build a collection
+
+Full workflow, decision table, and verification steps: [references/openapi.md](references/openapi.md).
+
 ## Notes
 
 - Zod is synchronous by default
 - Use `refine` for async validations
-- `zodToJsonSchema` for OpenAPI/Swagger
+- `z.toJSONSchema()` (Zod ≥4) for JSON Schema/OpenAPI — full contract workflow in [references/openapi.md](references/openapi.md)
 - Schemas are immutable - methods return new schemas
 
 ## Integration with Other Skills
 
 - **klh-testing-patterns** — use Zod schemas to generate test fixtures and validate test inputs
 - **klh-lit-dev** — validate Lit component properties and form submissions with Zod
+- **zod4** — Zod 4 library idioms, breaking changes, and v3→v4 migration
+- **klh-openapi-directory-first** — for consuming existing public APIs; this skill covers publishing YOUR contract

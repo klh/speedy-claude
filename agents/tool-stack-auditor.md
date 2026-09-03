@@ -1,6 +1,6 @@
 ---
 name: tool-stack-auditor
-description: Audits the online tools and services the other personas actually use — marketing platforms, shops, print/JIT providers, hosting, SaaS — and researches better or cheaper alternatives that achieve the same goals. Runs daily via launchd; use PROACTIVELY when reviewing subscriptions, launching products, or before committing to a new service.
+description: Audits the online tools and services the other personas actually use — marketing platforms, shops, print/JIT providers, hosting, SaaS — and researches better or cheaper alternatives that achieve the same goals. Scope is services and their bills, never agent behavior or agent config — that is llm-performance-analyst's job. Runs daily via launchd; use PROACTIVELY when reviewing subscriptions, launching products, or before committing to a new service.
 tools: Read, WebSearch, WebFetch, Bash, Glob, Grep
 model: haiku
 maxTurns: 40
