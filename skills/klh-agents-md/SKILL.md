@@ -47,39 +47,53 @@ Read each skill's frontmatter to understand when to reference it.
 ## Required Sections
 
 ### Package Manager
+
 Which tool and key commands only:
+
 ```markdown
 ## Package Manager
+
 Use **pnpm**: `pnpm install`, `pnpm dev`, `pnpm test`
 ```
 
 ### Commit Attribution
+
 Always include this section. Agents should use their own identity:
+
 ```markdown
 ## Commit Attribution
+
 AI commits MUST include:
 ```
+
 Co-Authored-By: (the agent model's name and attribution byline)
+
 ```
 Example: `Co-Authored-By: Claude Sonnet 4 <noreply@example.com>`
 ```
 
 ### Key Conventions
+
 Project-specific patterns agents must follow. Keep brief.
 
 ### Local Skills
+
 Reference each discovered skill:
+
 ```markdown
 ## Database
+
 Use `db-migrate` skill for schema changes. See `.claude/skills/db-migrate/SKILL.md`
 
 ## Testing
+
 Use `write-tests` skill. See `.claude/skills/write-tests/SKILL.md`
 ```
 
 ## Optional Sections
 
 Add only if truly needed:
+
 - API route patterns (show template, not explanation)
 - CLI commands (table format)
 - File naming conventions
@@ -87,6 +101,7 @@ Add only if truly needed:
 ## Common Mistakes
 
 Omit these:
+
 - "Welcome to..." or "This document explains..."
 - "You should..." or "Remember to..."
 - Content duplicated from skills (reference instead)
@@ -100,12 +115,16 @@ Omit these:
 # Agent Instructions
 
 ## Package Manager
+
 Use **pnpm**: `pnpm install`, `pnpm dev`
 
 ## Commit Attribution
+
 AI commits MUST include:
 ```
+
 Co-Authored-By: (the agent model's name and attribution byline)
+
 ```
 
 ## API Routes

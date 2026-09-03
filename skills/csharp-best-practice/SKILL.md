@@ -10,8 +10,8 @@ Use this skill to review or improve C# work using common ecosystem conventions i
 
 ## Intent Router
 
-| Need | Load |
-| --- | --- |
+| Need                                                            | Load                           |
+| --------------------------------------------------------------- | ------------------------------ |
 | core conventions, tooling defaults, and review checklist for C# | `references/best-practices.md` |
 
 ## Quick Start

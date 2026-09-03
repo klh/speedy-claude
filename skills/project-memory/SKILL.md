@@ -55,6 +55,7 @@ docs/
 **Directory naming rationale:** Using `docs/project_notes/` instead of `memory/` makes it look like standard engineering organization, not AI-specific tooling. This increases adoption and maintenance by human developers.
 
 **Initial file content:** Copy templates from the `references/` directory in this skill:
+
 - Use `references/bugs_template.md` for initial `bugs.md`
 - Use `references/decisions_template.md` for initial `decisions.md`
 - Use `references/key_facts_template.md` for initial `key_facts.md`
@@ -81,24 +82,29 @@ This project maintains institutional knowledge in `docs/project_notes/` for cons
 ### Memory-Aware Protocols
 
 **Before proposing architectural changes:**
+
 - Check `docs/project_notes/decisions.md` for existing decisions
 - Verify the proposed approach doesn't conflict with past choices
 - If it does conflict, acknowledge the existing decision and explain why a change is warranted
 
 **When encountering errors or bugs:**
+
 - Search `docs/project_notes/bugs.md` for similar issues
 - Apply known solutions if found
 - Document new bugs and solutions when resolved
 
 **When looking up project configuration:**
+
 - Check `docs/project_notes/key_facts.md` for credentials, ports, URLs, service accounts
 - Prefer documented facts over assumptions
 
 **When completing work on tickets:**
+
 - Log completed work in `docs/project_notes/issues.md`
 - Include ticket ID, date, brief description, and URL
 
 **When user requests memory updates:**
+
 - Update the appropriate memory file (bugs, decisions, key_facts, or issues)
 - Follow the established format and style (bullet lists, dates, concise entries)
 
@@ -124,6 +130,7 @@ If the project has an `AGENTS.md` file (used for agent workflows or multi-tool p
 When encountering problems or making decisions, proactively search memory files:
 
 **Search bugs.md:**
+
 ```bash
 # Look for similar errors
 grep -i "connection refused" docs/project_notes/bugs.md
@@ -133,6 +140,7 @@ grep "2025-01" docs/project_notes/bugs.md
 ```
 
 **Search decisions.md:**
+
 ```bash
 # Check for decisions about a technology
 grep -i "database" docs/project_notes/decisions.md
@@ -142,6 +150,7 @@ grep "^### ADR-" docs/project_notes/decisions.md
 ```
 
 **Search key_facts.md:**
+
 ```bash
 # Find database connection info
 grep -A 5 "Database" docs/project_notes/key_facts.md
@@ -151,6 +160,7 @@ grep -i "service account" docs/project_notes/key_facts.md
 ```
 
 **Use Grep tool for more complex searches:**
+
 - Search across all memory files: `Grep(pattern="oauth", path="docs/project_notes/")`
 - Context-aware search: `Grep(pattern="bug", path="docs/project_notes/bugs.md", -A=3, -B=3)`
 
@@ -159,8 +169,10 @@ grep -i "service account" docs/project_notes/key_facts.md
 When the user requests updates or when documenting resolved issues, update the appropriate memory file:
 
 **Adding a bug entry:**
+
 ```markdown
 ### YYYY-MM-DD - Brief Bug Description
+
 - **Issue**: What went wrong
 - **Root Cause**: Why it happened
 - **Solution**: How it was fixed
@@ -168,26 +180,32 @@ When the user requests updates or when documenting resolved issues, update the a
 ```
 
 **Adding a decision:**
+
 ```markdown
 ### ADR-XXX: Decision Title (YYYY-MM-DD)
 
 **Context:**
+
 - Why the decision was needed
 - What problem it solves
 
 **Decision:**
+
 - What was chosen
 
 **Alternatives Considered:**
+
 - Option 1 -> Why rejected
 - Option 2 -> Why rejected
 
 **Consequences:**
+
 - Benefits
 - Trade-offs
 ```
 
 **Adding key facts:**
+
 - Organize by category (GCP Project, Database, API, Local Development, etc.)
 - Use bullet lists for clarity
 - Include both production and development details
@@ -195,8 +213,10 @@ When the user requests updates or when documenting resolved issues, update the a
 - See `references/key_facts_template.md` for security guidelines on what NOT to store
 
 **Adding work log entry:**
+
 ```markdown
 ### YYYY-MM-DD - TICKET-ID: Brief Description
+
 - **Status**: Completed / In Progress / Blocked
 - **Description**: 1-2 line summary
 - **URL**: https://jira.company.com/browse/TICKET-ID
@@ -206,6 +226,7 @@ When the user requests updates or when documenting resolved issues, update the a
 ### 6. Memory File Maintenance
 
 **Periodically clean old entries:**
+
 - User is responsible for manual cleanup (no automation)
 - Remove very old bug entries (6+ months) that are no longer relevant
 - Archive completed work from issues.md (3+ months old)
@@ -213,6 +234,7 @@ When the user requests updates or when documenting resolved issues, update the a
 - Update key_facts.md when project configuration changes
 
 **Conflict resolution:**
+
 - If proposing something that conflicts with decisions.md, explain why revisiting the decision is warranted
 - Update the decision entry if the choice changes
 - Add date of revision to show evolution

@@ -42,18 +42,18 @@ difft references/openapi.json /tmp/dinero-spec-new.json        # eller: jq -S . 
 
 ## Intern API-oversigt (org 408818 eksempel)
 
-| Handling | Endpoint |
-|----------|----------|
-| Købsbilag | `POST /api/{org}/{periode}/vouchers/purchase/v2` → `POST /vouchers/{id}/book/{ts}` |
-| Finansbilag | `POST /api/{org}/{periode}/vouchers/manuel/v2` (auto-booker tit; ellers `POST /vouchers/manuel/{id}/book/{ts}`) |
-| Skabelonbilag (hævet/indskudt/overførsel/rente) | `POST /api/{org}/{periode}/vouchers/templates/{type}` → `.../{id}/{ts}/book` |
-| Bogført bilag slettes | `DELETE /api/{org}/{periode}/vouchers/manuel/{id}/{ts}` (skabelon) eller `/vouchers/purchases/cash/{id}/{ts}` (køb) |
-| Voucherliste | `GET /api/{org}/{periode}/accounting/vouchers?...` — **filtrér på voucherDate-år: numrene starter forfra hvert regnskabsår!** |
-| **Fil-upload til bilagsarkiv** | `POST /api/filearchive/v1/organizations/{org}/files/upload?source=web` (multipart, felt `file`) → svarer `[{"fileId","fileGuid"}]` |
-| **Fil ↔ bilag-link** | `POST /api/{org}/{periode}/voucherfile/{voucherId}/{ts}` body `{"fileGuid":"..."}` — ts fra GET på voucher (manuel- ELLER purchases/cash-rute). **IKKE via PUT fileGuid (500'er)** |
-| Kontospecifikation | `GET /api/{org}/{periode}/accounts/{accountId}/entries` |
-| Beholdninger/konti | `GET /api/{org}/{periode}/deposits` (deposit-id ≠ account-id!) |
-| Kontoplan | `GET /api/{org}/{periode}/accounts?page=0&pageSize=500` (felt `number`, ikke accountNumber) |
+| Handling                                        | Endpoint                                                                                                                                                                           |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Købsbilag                                       | `POST /api/{org}/{periode}/vouchers/purchase/v2` → `POST /vouchers/{id}/book/{ts}`                                                                                                 |
+| Finansbilag                                     | `POST /api/{org}/{periode}/vouchers/manuel/v2` (auto-booker tit; ellers `POST /vouchers/manuel/{id}/book/{ts}`)                                                                    |
+| Skabelonbilag (hævet/indskudt/overførsel/rente) | `POST /api/{org}/{periode}/vouchers/templates/{type}` → `.../{id}/{ts}/book`                                                                                                       |
+| Bogført bilag slettes                           | `DELETE /api/{org}/{periode}/vouchers/manuel/{id}/{ts}` (skabelon) eller `/vouchers/purchases/cash/{id}/{ts}` (køb)                                                                |
+| Voucherliste                                    | `GET /api/{org}/{periode}/accounting/vouchers?...` — **filtrér på voucherDate-år: numrene starter forfra hvert regnskabsår!**                                                      |
+| **Fil-upload til bilagsarkiv**                  | `POST /api/filearchive/v1/organizations/{org}/files/upload?source=web` (multipart, felt `file`) → svarer `[{"fileId","fileGuid"}]`                                                 |
+| **Fil ↔ bilag-link**                            | `POST /api/{org}/{periode}/voucherfile/{voucherId}/{ts}` body `{"fileGuid":"..."}` — ts fra GET på voucher (manuel- ELLER purchases/cash-rute). **IKKE via PUT fileGuid (500'er)** |
+| Kontospecifikation                              | `GET /api/{org}/{periode}/accounts/{accountId}/entries`                                                                                                                            |
+| Beholdninger/konti                              | `GET /api/{org}/{periode}/deposits` (deposit-id ≠ account-id!)                                                                                                                     |
+| Kontoplan                                       | `GET /api/{org}/{periode}/accounts?page=0&pageSize=500` (felt `number`, ikke accountNumber)                                                                                        |
 
 ## Kritiskeenheds- og feltregler
 

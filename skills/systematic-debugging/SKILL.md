@@ -24,6 +24,7 @@ Before touching any code:
 5. **Trace data flow** - Follow the call chain to find where bad values originate
 
 **Root Cause Tracing Technique:**
+
 ```
 1. Observe the symptom - Where does the error manifest?
 2. Find immediate cause - Which code directly produces the error?
@@ -140,6 +141,7 @@ Before claiming a bug is fixed:
 Systematic debugging achieves ~95% first-time fix rate vs ~40% with ad-hoc approaches.
 
 Signs you're doing it right:
+
 - Fixes don't create new bugs
 - You can explain WHY the bug occurred
 - Similar bugs don't recur

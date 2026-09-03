@@ -17,6 +17,7 @@ This skill covers Zod schema validation for type-safe data validation.
 ## When to Use
 
 Use this skill when:
+
 - Validating API request bodies
 - Parsing environment variables
 - Transforming data
@@ -35,7 +36,7 @@ npm install zod
 ## Basic Schemas
 
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 
 // Primitives
 const stringSchema = z.string();
@@ -58,7 +59,7 @@ const rangeSchema = z.number().min(0).max(100);
 // Optional and nullable
 const optionalSchema = z.string().optional(); // string | undefined
 const nullableSchema = z.string().nullable(); // string | null
-const nullishSchema = z.string().nullish();   // string | null | undefined
+const nullishSchema = z.string().nullish(); // string | null | undefined
 ```
 
 ## Object Schemas
@@ -69,7 +70,7 @@ const UserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(100),
   age: z.number().int().positive().optional(),
-  role: z.enum(['USER', 'ADMIN', 'MODERATOR']),
+  role: z.enum(["USER", "ADMIN", "MODERATOR"]),
   createdAt: z.date(),
 });
 
@@ -106,13 +107,13 @@ const CoordinatesSchema = z.tuple([z.number(), z.number()]);
 
 // Unions
 const StringOrNumberSchema = z.union([z.string(), z.number()]);
-const ResultSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('success'), data: z.unknown() }),
-  z.object({ status: z.literal('error'), error: z.string() }),
+const ResultSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("success"), data: z.unknown() }),
+  z.object({ status: z.literal("error"), error: z.string() }),
 ]);
 
 // Enums
-const RoleSchema = z.enum(['USER', 'ADMIN', 'MODERATOR']);
+const RoleSchema = z.enum(["USER", "ADMIN", "MODERATOR"]);
 type Role = z.infer<typeof RoleSchema>; // 'USER' | 'ADMIN' | 'MODERATOR'
 ```
 
@@ -121,12 +122,13 @@ type Role = z.infer<typeof RoleSchema>; // 'USER' | 'ADMIN' | 'MODERATOR'
 ```typescript
 // Create user request
 const CreateUserSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain uppercase letter')
-    .regex(/[0-9]/, 'Password must contain number'),
-  name: z.string().min(1, 'Name is required').max(100),
+  email: z.string().email("Invalid email address"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain uppercase letter")
+    .regex(/[0-9]/, "Password must contain number"),
+  name: z.string().min(1, "Name is required").max(100),
 });
 
 // Update user request (all fields optional)
@@ -136,12 +138,12 @@ const UpdateUserSchema = CreateUserSchema.partial();
 const PaginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(20),
-  sort: z.enum(['asc', 'desc']).default('desc'),
+  sort: z.enum(["asc", "desc"]).default("desc"),
 });
 
 // Path parameters
 const IdParamSchema = z.object({
-  id: z.string().uuid('Invalid ID format'),
+  id: z.string().uuid("Invalid ID format"),
 });
 ```
 
@@ -157,13 +159,13 @@ const DateStringSchema = z.string().transform((str) => new Date(str));
 
 // Coerce types
 const CoercedNumberSchema = z.coerce.number(); // "42" -> 42
-const CoercedDateSchema = z.coerce.date();     // "2024-01-01" -> Date
+const CoercedDateSchema = z.coerce.date(); // "2024-01-01" -> Date
 
 // Complex transformation
 const UserInputSchema = z.object({
   email: z.string().email().toLowerCase().trim(),
   name: z.string().trim(),
-  tags: z.string().transform((str) => str.split(',').map((t) => t.trim())),
+  tags: z.string().transform((str) => str.split(",").map((t) => t.trim())),
 });
 ```
 
@@ -171,46 +173,47 @@ const UserInputSchema = z.object({
 
 ```typescript
 // Custom refinement
-const PasswordSchema = z.string()
+const PasswordSchema = z
+  .string()
   .min(8)
-  .refine(
-    (password) => /[A-Z]/.test(password),
-    { message: 'Password must contain uppercase letter' }
-  )
-  .refine(
-    (password) => /[0-9]/.test(password),
-    { message: 'Password must contain number' }
-  );
+  .refine((password) => /[A-Z]/.test(password), {
+    message: "Password must contain uppercase letter",
+  })
+  .refine((password) => /[0-9]/.test(password), {
+    message: "Password must contain number",
+  });
 
 // Cross-field validation
-const PasswordConfirmSchema = z.object({
-  password: z.string().min(8),
-  confirmPassword: z.string(),
-}).refine(
-  (data) => data.password === data.confirmPassword,
-  {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  }
-);
+const PasswordConfirmSchema = z
+  .object({
+    password: z.string().min(8),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 // Async validation
-const UniqueEmailSchema = z.string().email().refine(
-  async (email) => {
-    const exists = await checkEmailExists(email);
-    return !exists;
-  },
-  { message: 'Email already registered' }
-);
+const UniqueEmailSchema = z
+  .string()
+  .email()
+  .refine(
+    async (email) => {
+      const exists = await checkEmailExists(email);
+      return !exists;
+    },
+    { message: "Email already registered" },
+  );
 ```
 
 ## Fastify Integration
 
 ```typescript
 // src/routes/users.ts
-import { FastifyPluginAsync } from 'fastify';
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { FastifyPluginAsync } from "fastify";
+import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 const CreateUserSchema = z.object({
   email: z.string().email(),
@@ -230,12 +233,12 @@ type UserResponse = z.infer<typeof UserResponseSchema>;
 
 const usersRoutes: FastifyPluginAsync = async (fastify) => {
   // Manual validation
-  fastify.post<{ Body: CreateUserInput }>('/', async (request, reply) => {
+  fastify.post<{ Body: CreateUserInput }>("/", async (request, reply) => {
     const result = CreateUserSchema.safeParse(request.body);
 
     if (!result.success) {
       return reply.status(400).send({
-        error: 'Validation failed',
+        error: "Validation failed",
         details: result.error.flatten(),
       });
     }
@@ -245,17 +248,21 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // With JSON Schema (Fastify validates)
-  fastify.post<{ Body: CreateUserInput; Reply: UserResponse }>('/v2', {
-    schema: {
-      body: zodToJsonSchema(CreateUserSchema),
-      response: {
-        201: zodToJsonSchema(UserResponseSchema),
+  fastify.post<{ Body: CreateUserInput; Reply: UserResponse }>(
+    "/v2",
+    {
+      schema: {
+        body: zodToJsonSchema(CreateUserSchema),
+        response: {
+          201: zodToJsonSchema(UserResponseSchema),
+        },
       },
     },
-  }, async (request, reply) => {
-    const user = await createUser(request.body);
-    return reply.status(201).send(user);
-  });
+    async (request, reply) => {
+      const user = await createUser(request.body);
+      return reply.status(201).send(user);
+    },
+  );
 };
 ```
 
@@ -263,15 +270,17 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
 ```typescript
 // src/config/env.ts
-import { z } from 'zod';
+import { z } from "zod";
 
 const EnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
   PORT: z.coerce.number().default(3000),
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(32),
   CORS_ORIGIN: z.string().url().optional(),
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -280,7 +289,7 @@ function validateEnv(): Env {
   const result = EnvSchema.safeParse(process.env);
 
   if (!result.success) {
-    console.error('Invalid environment variables:');
+    console.error("Invalid environment variables:");
     console.error(result.error.flatten().fieldErrors);
     process.exit(1);
   }
@@ -294,7 +303,7 @@ export const env = validateEnv();
 ## Error Handling
 
 ```typescript
-import { z, ZodError } from 'zod';
+import { z, ZodError } from "zod";
 
 function parseOrThrow<T>(schema: z.ZodSchema<T>, data: unknown): T {
   return schema.parse(data);

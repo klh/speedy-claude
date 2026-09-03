@@ -10,8 +10,8 @@ Use this skill to review or improve SQL work using common ecosystem conventions 
 
 ## Intent Router
 
-| Need | Load |
-| --- | --- |
+| Need                                                             | Load                           |
+| ---------------------------------------------------------------- | ------------------------------ |
 | core conventions, tooling defaults, and review checklist for SQL | `references/best-practices.md` |
 
 ## Quick Start

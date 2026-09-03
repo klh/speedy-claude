@@ -54,7 +54,7 @@ curl -s "https://api.github.com/repos/APIs-guru/openapi-directory/contents/APIs/
 import json,sys
 data=json.load(sys.stdin)
 for item in data:
-    print(f'{item[\"name\"]}')" 
+    print(f'{item[\"name\"]}')"
 ```
 
 Common provider domains: `stripe.com`, `github.com`, `spotify.com`, `amazonaws.com`, `googleapis.com`, `microsoft.com`, `twilio.com`, `slack.com`, `shopify.com`, `paypal.com`, `sendgrid.com`, `notion.com`, `figma.com`
@@ -70,6 +70,7 @@ https://raw.githubusercontent.com/APIs-guru/openapi-directory/main/APIs/{provide
 ```
 
 Example — Stripe API:
+
 ```
 https://raw.githubusercontent.com/APIs-guru/openapi-directory/main/APIs/stripe.com/2022-11-15/openapi.yaml
 ```
@@ -77,6 +78,7 @@ https://raw.githubusercontent.com/APIs-guru/openapi-directory/main/APIs/stripe.c
 ### Step 4: Extract what you need
 
 The OpenAPI spec contains:
+
 - **`paths/`** — All endpoints with methods, parameters, request bodies, responses
 - **`components/schemas/`** — Data models with types and validation rules
 - **`security/`** — Auth schemes (API key, OAuth, Bearer, etc.)
@@ -97,13 +99,13 @@ for m in matches:
 
 ## Common Mistakes
 
-| Mistake | Fix |
-|---------|-----|
-| Guessing parameter types from memory | Read the actual schema from the spec |
-| Using outdated endpoint paths | Check the latest version in the directory |
-| Assuming auth scheme | Read `security` and `securitySchemes` from the spec |
-| Skipping this step because "I know the API" | You don't. Specs change. Always check. |
-| Only reading partial spec | Use the full file, not just endpoints you think you need |
+| Mistake                                     | Fix                                                      |
+| ------------------------------------------- | -------------------------------------------------------- |
+| Guessing parameter types from memory        | Read the actual schema from the spec                     |
+| Using outdated endpoint paths               | Check the latest version in the directory                |
+| Assuming auth scheme                        | Read `security` and `securitySchemes` from the spec      |
+| Skipping this step because "I know the API" | You don't. Specs change. Always check.                   |
+| Only reading partial spec                   | Use the full file, not just endpoints you think you need |
 
 ## Key Facts
 

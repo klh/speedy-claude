@@ -33,13 +33,13 @@ Use components from your core library instead of raw platform components. This e
 ```
 
 | Token | Value |
-|-------|-------|
-| `$1` | 4px |
-| `$2` | 8px |
-| `$3` | 12px |
-| `$4` | 16px |
-| `$6` | 24px |
-| `$8` | 32px |
+| ----- | ----- |
+| `$1`  | 4px   |
+| `$2`  | 8px   |
+| `$3`  | 12px  |
+| `$4`  | 16px  |
+| `$6`  | 24px  |
+| `$8`  | 32px  |
 
 ### Color Tokens
 
@@ -53,14 +53,14 @@ Use components from your core library instead of raw platform components. This e
 <Box backgroundColor="rgb(245, 245, 245)" />
 ```
 
-| Semantic Token | Use For |
-|----------------|---------|
-| `$textPrimary` | Main text |
-| `$textSecondary` | Supporting text |
-| `$textTertiary` | Disabled/hint text |
-| `$primary500` | Brand/accent color |
-| `$statusError` | Error states |
-| `$statusSuccess` | Success states |
+| Semantic Token   | Use For            |
+| ---------------- | ------------------ |
+| `$textPrimary`   | Main text          |
+| `$textSecondary` | Supporting text    |
+| `$textTertiary`  | Disabled/hint text |
+| `$primary500`    | Brand/accent color |
+| `$statusError`   | Error states       |
+| `$statusSuccess` | Success states     |
 
 ### Typography Tokens
 
@@ -68,13 +68,13 @@ Use components from your core library instead of raw platform components. This e
 <Text fontSize="$lg" fontWeight="$semibold" />
 ```
 
-| Token | Size |
-|-------|------|
-| `$xs` | 12px |
-| `$sm` | 14px |
-| `$md` | 16px |
-| `$lg` | 18px |
-| `$xl` | 20px |
+| Token  | Size |
+| ------ | ---- |
+| `$xs`  | 12px |
+| `$sm`  | 14px |
+| `$md`  | 16px |
+| `$lg`  | 18px |
+| `$xl`  | 20px |
 | `$2xl` | 24px |
 
 ## Core Components
@@ -84,11 +84,7 @@ Use components from your core library instead of raw platform components. This e
 Base layout component with token support:
 
 ```tsx
-<Box
-  padding="$4"
-  backgroundColor="$backgroundPrimary"
-  borderRadius="$lg"
->
+<Box padding="$4" backgroundColor="$backgroundPrimary" borderRadius="$lg">
   {children}
 </Box>
 ```
@@ -114,11 +110,7 @@ Horizontal and vertical flex layouts:
 Typography with token support:
 
 ```tsx
-<Text
-  fontSize="$lg"
-  fontWeight="$semibold"
-  color="$textPrimary"
->
+<Text fontSize="$lg" fontWeight="$semibold" color="$textPrimary">
   Hello World
 </Text>
 ```
@@ -139,12 +131,12 @@ Interactive button with variants:
 </Button>
 ```
 
-| Variant | Use For |
-|---------|---------|
-| `solid` | Primary actions |
-| `outline` | Secondary actions |
-| `ghost` | Tertiary/subtle actions |
-| `link` | Inline actions |
+| Variant   | Use For                 |
+| --------- | ----------------------- |
+| `solid`   | Primary actions         |
+| `outline` | Secondary actions       |
+| `ghost`   | Tertiary/subtle actions |
+| `link`    | Inline actions          |
 
 ### Input
 
@@ -183,9 +175,7 @@ Content container:
 const MyScreen = () => (
   <Screen>
     <ScreenHeader title="Page Title" />
-    <ScreenContent padding="$4">
-      {/* Content */}
-    </ScreenContent>
+    <ScreenContent padding="$4">{/* Content */}</ScreenContent>
   </Screen>
 );
 ```
@@ -213,7 +203,9 @@ const MyScreen = () => (
   <Avatar source={{ uri: imageUrl }} size="md" />
   <VStack flex={1}>
     <Text fontWeight="$semibold">{title}</Text>
-    <Text color="$textSecondary" fontSize="$sm">{subtitle}</Text>
+    <Text color="$textSecondary" fontSize="$sm">
+      {subtitle}
+    </Text>
   </VStack>
   <Icon name="chevron-right" color="$textTertiary" />
 </HStack>
@@ -249,12 +241,16 @@ When creating components, use token-based props:
 
 ```tsx
 interface CardProps {
-  padding?: '$2' | '$4' | '$6';
-  variant?: 'elevated' | 'outlined' | 'filled';
+  padding?: "$2" | "$4" | "$6";
+  variant?: "elevated" | "outlined" | "filled";
   children: React.ReactNode;
 }
 
-const Card = ({ padding = '$4', variant = 'elevated', children }: CardProps) => (
+const Card = ({
+  padding = "$4",
+  variant = "elevated",
+  children,
+}: CardProps) => (
   <Box
     padding={padding}
     backgroundColor="$backgroundPrimary"

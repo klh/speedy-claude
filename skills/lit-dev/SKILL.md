@@ -7,17 +7,18 @@ description: Use when creating Lit web components with TypeScript decorators, JS
 
 ## Tech Stack
 
-| Tool | Purpose | Version |
-|------|---------|---------|
-| **Lit** | Web component library | Latest (`lit`) |
-| **TypeScript** | Type-safe development | Latest |
-| **Zod** | Schema validation & type inference | Latest |
-| **Playwright** | E2E/component testing | Latest (`@playwright/test`) |
-| **ESLint** | Linting | Latest with Lit configs |
-| **Turborepo** | Monorepo build system | Latest |
-| **pnpm** | Package management | Latest (strict peer dependencies) |
+| Tool           | Purpose                            | Version                           |
+| -------------- | ---------------------------------- | --------------------------------- |
+| **Lit**        | Web component library              | Latest (`lit`)                    |
+| **TypeScript** | Type-safe development              | Latest                            |
+| **Zod**        | Schema validation & type inference | Latest                            |
+| **Playwright** | E2E/component testing              | Latest (`@playwright/test`)       |
+| **ESLint**     | Linting                            | Latest with Lit configs           |
+| **Turborepo**  | Monorepo build system              | Latest                            |
+| **pnpm**       | Package management                 | Latest (strict peer dependencies) |
 
 **Setup commands:**
+
 ```bash
 pnpm create turbo@latest  # or pnpm init
 pnpm add lit zod @playwright/test
@@ -66,25 +67,25 @@ Each component exports via `index.ts`:
 
 ```typescript
 // components/my-component/index.ts
-export { MyComponent } from './my-component.js';
-export type { MyComponentProps } from './my-component.zod.js';
+export { MyComponent } from "./my-component.js";
+export type { MyComponentProps } from "./my-component.zod.js";
 ```
 
 Root re-exports all components:
 
 ```typescript
 // components/index.ts
-export * from './my-component/index.js';
-export * from './another-component/index.js';
+export * from "./my-component/index.js";
+export * from "./another-component/index.js";
 ```
 
 ### 3. Component Definition with Decorators
 
 ```typescript
-import { LitElement, html } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { ifDefined } from 'lit/directives/if-defined.js';
-import type { MyComponentProps } from './my-component.zod.js';
+import { LitElement, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
+import type { MyComponentProps } from "./my-component.zod.js";
 
 /**
  * A brief component description.
@@ -93,11 +94,11 @@ import type { MyComponentProps } from './my-component.zod.js';
  * @cssprop [--primary-color=#005fcc] - Primary accent color
  * @slot - Default slot for content
  */
-@customElement('my-component')
+@customElement("my-component")
 export class MyComponent extends LitElement {
   /** Public API property */
   @property({ type: String, reflect: true })
-  value: string = '';
+  value: string = "";
 
   /** Internal reactive state */
   @state()
@@ -117,11 +118,13 @@ export class MyComponent extends LitElement {
   private _handleInput(e: InputEvent) {
     const target = e.target as HTMLInputElement;
     this.value = target.value;
-    this.dispatchEvent(new CustomEvent('change', {
-      detail: { value: this.value },
-      bubbles: true,
-      composed: true,
-    }));
+    this.dispatchEvent(
+      new CustomEvent("change", {
+        detail: { value: this.value },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 }
 ```
@@ -130,12 +133,12 @@ export class MyComponent extends LitElement {
 
 ```typescript
 // components/my-component/my-component.zod.ts
-import { z } from 'zod';
+import { z } from "zod";
 
 /** Schema for my-component properties */
 export const myComponentPropsSchema = z.object({
   /** The current value */
-  value: z.string().default(''),
+  value: z.string().default(""),
   /** Maximum length */
   maxlength: z.number().int().positive().optional(),
 });
@@ -163,26 +166,33 @@ export function validateMyComponentProps(props: unknown): MyComponentProps {
 <!-- components/my-component/fixtures/basic.html -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>My Component Fixture</title>
-  <script type="module" src="../../../test-helpers.js"></script>
-  <style>
-    body { margin: 0; padding: 20px; font-family: system-ui; }
-    my-component { display: block; margin: 10px 0; }
-  </style>
-</head>
-<body>
-  <h1>Basic Usage</h1>
-  <my-component id="basic"></my-component>
+  <head>
+    <meta charset="UTF-8" />
+    <title>My Component Fixture</title>
+    <script type="module" src="../../../test-helpers.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui;
+      }
+      my-component {
+        display: block;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Basic Usage</h1>
+    <my-component id="basic"></my-component>
 
-  <h1>With Initial Value</h1>
-  <my-component id="with-value" value="Hello"></my-component>
+    <h1>With Initial Value</h1>
+    <my-component id="with-value" value="Hello"></my-component>
 
-  <h1>Event Logging</h1>
-  <my-component id="events"></my-component>
-  <pre id="log"></pre>
-</body>
+    <h1>Event Logging</h1>
+    <my-component id="events"></my-component>
+    <pre id="log"></pre>
+  </body>
 </html>
 ```
 
@@ -190,34 +200,41 @@ export function validateMyComponentProps(props: unknown): MyComponentProps {
 
 ```typescript
 // components/my-component/my-component.spec.tsx
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('my-component', () => {
+test.describe("my-component", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/components/my-component/fixtures/basic.html');
+    await page.goto("/components/my-component/fixtures/basic.html");
   });
 
-  test('renders initial value', async ({ page }) => {
-    const component = page.locator('#with-value');
-    await expect(component).toHaveAttribute('value', 'Hello');
-    const input = component.locator('input');
-    await expect(input).toHaveValue('Hello');
+  test("renders initial value", async ({ page }) => {
+    const component = page.locator("#with-value");
+    await expect(component).toHaveAttribute("value", "Hello");
+    const input = component.locator("input");
+    await expect(input).toHaveValue("Hello");
   });
 
-  test('dispatches change event on user input', async ({ page }) => {
-    const component = page.locator('#events');
-    const input = component.locator('input');
-    await input.fill('test value');
+  test("dispatches change event on user input", async ({ page }) => {
+    const component = page.locator("#events");
+    const input = component.locator("input");
+    await input.fill("test value");
 
-    const event = await page.evaluate((el) => {
-      return new Promise((resolve) => {
-        el.addEventListener('change', (e: CustomEvent) => {
-          resolve(e.detail);
-        }, { once: true });
-      });
-    }, await component.elementHandle());
+    const event = await page.evaluate(
+      (el) => {
+        return new Promise((resolve) => {
+          el.addEventListener(
+            "change",
+            (e: CustomEvent) => {
+              resolve(e.detail);
+            },
+            { once: true },
+          );
+        });
+      },
+      await component.elementHandle(),
+    );
 
-    expect(event).toEqual({ value: 'test value' });
+    expect(event).toEqual({ value: "test value" });
   });
 });
 ```
@@ -245,12 +262,13 @@ Required JSDoc tags for components:
 For Playwright to access fixtures, serve them via:
 
 **Playwright config:**
+
 ```typescript
 // playwright.config.ts
 export default defineConfig({
-  use: { baseURL: 'http://localhost:8080' },
+  use: { baseURL: "http://localhost:8080" },
   webServer: {
-    command: 'npx http-server . -p 8080 --cors -c-1',
+    command: "npx http-server . -p 8080 --cors -c-1",
     port: 8080,
     reuseExisting: true,
   },
@@ -259,16 +277,16 @@ export default defineConfig({
 
 ## Quick Reference
 
-| Decorator | Purpose | Options |
-|-----------|---------|---------|
-| `@customElement('name')` | Register element | - |
-| `@property()` | Public reactive property | `type`, `attribute`, `reflect`, `converter` |
-| `@state()` | Internal reactive state | `hasChanged` |
-| `@query()` | Query shadow DOM | - |
-| `@queryAll()` | Query all matches | - |
-| `@queryAsync()` | Query with async resolution | - |
-| `@queryAssignedElements()` | Query slotted elements | `slot`, `flatten`, `selector` |
-| `@queryAssignedNodes()` | Query slotted nodes | `slot`, `flatten` |
+| Decorator                  | Purpose                     | Options                                     |
+| -------------------------- | --------------------------- | ------------------------------------------- |
+| `@customElement('name')`   | Register element            | -                                           |
+| `@property()`              | Public reactive property    | `type`, `attribute`, `reflect`, `converter` |
+| `@state()`                 | Internal reactive state     | `hasChanged`                                |
+| `@query()`                 | Query shadow DOM            | -                                           |
+| `@queryAll()`              | Query all matches           | -                                           |
+| `@queryAsync()`            | Query with async resolution | -                                           |
+| `@queryAssignedElements()` | Query slotted elements      | `slot`, `flatten`, `selector`               |
+| `@queryAssignedNodes()`    | Query slotted nodes         | `slot`, `flatten`                           |
 
 ## Property Options
 
@@ -287,21 +305,22 @@ export default defineConfig({
 
 ## Template Expressions
 
-| Type | Syntax | Example |
-|------|--------|---------|
-| Child | `${value}` | `html`<div>${name}</div>` |
-| Attribute | `attr="${value}"` | `html`<div class="${activeClass}">` |
-| Boolean | `?attr="${value}"` | `html`<div ?hidden="${!show}">` |
-| Property | `.prop="${value}"` | `html`<input .value="${val}">` |
-| Event | `@event="${handler}"` | `html`<button @click="${handler}">` |
+| Type      | Syntax                | Example                             |
+| --------- | --------------------- | ----------------------------------- |
+| Child     | `${value}`            | `html`<div>${name}</div>`           |
+| Attribute | `attr="${value}"`     | `html`<div class="${activeClass}">` |
+| Boolean   | `?attr="${value}"`    | `html`<div ?hidden="${!show}">`     |
+| Property  | `.prop="${value}"`    | `html`<input .value="${val}">`      |
+| Event     | `@event="${handler}"` | `html`<button @click="${handler}">` |
 
 **Removing content/attributes:**
-```typescript
-import { nothing, ifDefined } from 'lit';
 
-html`<div>${this.value ?? nothing}</div>`           // Remove child
-html`<button aria-label="${this.label || nothing}">`  // Remove attribute
-html`<img src="/images/${ifDefined(this.path)}">`     // ifDefined = value ?? nothing
+```typescript
+import { nothing, ifDefined } from "lit";
+
+html`<div>${this.value ?? nothing}</div>`; // Remove child
+html`<button aria-label="${this.label || nothing}"></button>`; // Remove attribute
+html`<img src="/images/${ifDefined(this.path)}" />`; // ifDefined = value ?? nothing
 ```
 
 ## Template Directives
@@ -354,25 +373,27 @@ html`<input ${ref(this._input)}>`
 For managing async data with proper state tracking:
 
 ```typescript
-import { Task, TaskStatus } from '@lit/task';
+import { Task, TaskStatus } from "@lit/task";
 
 class MyElement extends LitElement {
   @property() productId?: string;
 
   private _productTask = new Task(this, {
-    task: async ([productId], {signal}) => {
-      const response = await fetch(`http://example.com/product/${productId}`, {signal});
+    task: async ([productId], { signal }) => {
+      const response = await fetch(`http://example.com/product/${productId}`, {
+        signal,
+      });
       if (!response.ok) throw new Error(response.status);
       return response.json() as Product;
     },
-    args: () => [this.productId]
+    args: () => [this.productId],
   });
 
   render() {
     return this._productTask.render({
       pending: () => html`<p>Loading...</p>`,
       complete: (product) => html`<h1>${product.name}</h1>`,
-      error: (e) => html`<p>Error: ${e}</p>`
+      error: (e) => html`<p>Error: ${e}</p>`,
     });
   }
 }
@@ -385,12 +406,12 @@ Task states: `INITIAL`, `PENDING`, `COMPLETE`, `ERROR`.
 For shared observable state (TC39 Signals Proposal):
 
 ```typescript
-import { SignalWatcher, watch, signal } from '@lit-labs/signals';
+import { SignalWatcher, watch, signal } from "@lit-labs/signals";
 
 // Create shared signal
 const count = signal(0);
 
-@customElement('shared-counter')
+@customElement("shared-counter")
 export class SharedCounter extends SignalWatcher(LitElement) {
   render() {
     return html`
@@ -406,24 +427,24 @@ export class SharedCounter extends SignalWatcher(LitElement) {
 For "is-a" composition (adding behavior to class prototype):
 
 ```typescript
-import { LitElement } from 'lit';
+import { LitElement } from "lit";
 type Constructor<T = {}> = new (...args: any[]) => T;
 
 // Define mixin
 export const MyMixin = <T extends Constructor<LitElement>>(superClass: T) => {
   class MyMixinClass extends superClass {
-    @property() mode = 'on';
+    @property() mode = "on";
 
     connectedCallback() {
       super.connectedCallback();
       // Mixin behavior
     }
-  };
+  }
   return MyMixinClass as T & Constructor<{ mode: string }>;
 };
 
 // Apply mixin
-@customElement('my-element')
+@customElement("my-element")
 export class MyElement extends MyMixin(LitElement) {
   // Has .mode property from mixin
 }
@@ -436,12 +457,15 @@ export class MyElement extends MyMixin(LitElement) {
 For "has-a" composition (reusable logic with own identity):
 
 ```typescript
-import { ReactiveController, ReactiveControllerHost } from 'lit';
+import { ReactiveController, ReactiveControllerHost } from "lit";
 
 class ResizeController implements ReactiveController {
   private _observer?: ResizeObserver;
 
-  constructor(private host: ReactiveControllerHost, private target: HTMLElement) {
+  constructor(
+    private host: ReactiveControllerHost,
+    private target: HTMLElement,
+  ) {
     host.addController(this);
   }
 
@@ -456,7 +480,7 @@ class ResizeController implements ReactiveController {
 }
 
 // Usage
-@customElement('my-component')
+@customElement("my-component")
 export class MyComponent extends LitElement {
   private _resize = new ResizeController(this, this);
 }
@@ -469,7 +493,7 @@ export class MyComponent extends LitElement {
 For stateful, DOM-accessing template extensions:
 
 ```typescript
-import { Directive, directive, AsyncDirective } from 'lit/directive.js';
+import { Directive, directive, AsyncDirective } from "lit/directive.js";
 
 // Simple directive
 class HelloDirective extends Directive {
@@ -483,7 +507,7 @@ const hello = directive(HelloDirective);
 class AsyncDataDirective extends AsyncDirective {
   render(promise: Promise<unknown>) {
     Promise.resolve(promise).then((value) => {
-      this.setValue(value);  // Update outside render cycle
+      this.setValue(value); // Update outside render cycle
     });
     return `Loading...`;
   }
@@ -502,6 +526,7 @@ export const asyncData = directive(AsyncDataDirective);
 ## Shadow DOM & Slots
 
 **Query decorators:**
+
 ```typescript
 @query('input') _input!: HTMLInputElement;
 @queryAll('button') _buttons!: NodeListOf<HTMLButtonElement>;
@@ -511,6 +536,7 @@ export const asyncData = directive(AsyncDataDirective);
 ```
 
 **Slot patterns:**
+
 ```typescript
 // Default slot
 html`<div><slot></slot></div>`
@@ -568,13 +594,13 @@ static styles = css`
 
 ## Common Mistakes
 
-| Mistake | Fix |
-|---------|-----|
+| Mistake                                | Fix                                                            |
+| -------------------------------------- | -------------------------------------------------------------- |
 | Mutating array property doesn't update | Use immutable pattern: `this.items = [...this.items, newItem]` |
-| Forgetting `composed: true` on events | Events won't escape shadow DOM |
-| Boolean prop defaulting to `true` | Can't be set to false from markup; use inverted name |
-| Using `map` when list reorders | Use `repeat` with keys for stable DOM on reordering |
-| Changing `literal` values frequently | Causes full re-render; only use for static values |
+| Forgetting `composed: true` on events  | Events won't escape shadow DOM                                 |
+| Boolean prop defaulting to `true`      | Can't be set to false from markup; use inverted name           |
+| Using `map` when list reorders         | Use `repeat` with keys for stable DOM on reordering            |
+| Changing `literal` values frequently   | Causes full re-render; only use for static values              |
 
 ## Event Dispatching Pattern
 
@@ -637,23 +663,23 @@ override updated(changed: PropertyValues) {
 ## Context (Dependency Injection)
 
 ```typescript
-import { createContext, provide, consume } from '@lit/context';
+import { createContext, provide, consume } from "@lit/context";
 
-export const loggerContext = createContext<Logger>(Symbol('logger'));
+export const loggerContext = createContext<Logger>(Symbol("logger"));
 
 // Provider
-@customElement('my-app')
+@customElement("my-app")
 export class MyApp extends LitElement {
-  @provide({context: loggerContext})
-  @property({attribute: false})
+  @provide({ context: loggerContext })
+  @property({ attribute: false })
   logger = new ConsoleLogger();
 }
 
 // Consumer
-@customElement('my-component')
+@customElement("my-component")
 export class MyComponent extends LitElement {
-  @consume({context: loggerContext})
-  @property({attribute: false})
+  @consume({ context: loggerContext })
+  @property({ attribute: false })
   logger?: Logger;
 }
 ```
@@ -662,14 +688,14 @@ export class MyComponent extends LitElement {
 
 **@lit-labs scope packages under active development:**
 
-| Package | Purpose |
-|---------|---------|
-| `signals` | TC39 Signals Proposal integration |
-| `ssr` | Server-side rendering |
-| `virtualizer` | Viewport virtualization |
-| `motion` | Animation helpers |
-| `observers` | Reactive controllers for platform observers |
-| `testing` | Testing utilities including SSR fixtures |
+| Package       | Purpose                                     |
+| ------------- | ------------------------------------------- |
+| `signals`     | TC39 Signals Proposal integration           |
+| `ssr`         | Server-side rendering                       |
+| `virtualizer` | Viewport virtualization                     |
+| `motion`      | Animation helpers                           |
+| `observers`   | Reactive controllers for platform observers |
+| `testing`     | Testing utilities including SSR fixtures    |
 
 **Note:** Breaking changes more likely. Projects graduate to `@lit` scope when stable.
 
@@ -678,10 +704,10 @@ export class MyComponent extends LitElement {
 For dynamic tag/attribute names (rare, use sparingly):
 
 ```typescript
-import { html, literal, unsafeStatic } from 'lit/static-html.js';
+import { html, literal, unsafeStatic } from "lit/static-html.js";
 
 class MyButton extends LitElement {
-  tag = literal`button`;  // Changes cause full re-render
+  tag = literal`button`; // Changes cause full re-render
 
   render() {
     // Safe: developer-controlled strings only
@@ -730,8 +756,8 @@ class MyButton extends LitElement {
 
 ```yaml
 packages:
-  - 'packages/*'
-  - 'components/*'
+  - "packages/*"
+  - "components/*"
 ```
 
 ### turbo.json
@@ -788,67 +814,70 @@ packages:
 ### eslint.config.js (flat config)
 
 ```javascript
-import eslint from '@eslint/js';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsparser from '@typescript-eslint/parser';
-import lit from 'eslint-plugin-lit';
+import eslint from "@eslint/js";
+import tseslint from "@typescript-eslint/eslint-plugin";
+import tsparser from "@typescript-eslint/parser";
+import lit from "eslint-plugin-lit";
 
 export default [
   eslint.configs.recommended,
   {
-    files: ['**/*.ts'],
+    files: ["**/*.ts"],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
-      }
+      },
     },
-    plugins: { '@typescript-eslint': tseslint },
+    plugins: { "@typescript-eslint": tseslint },
     rules: {
-      '@typescript-eslint/no-unused-vars': ['error', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_'
-      }],
-      '@typescript-eslint/explicit-member-accessibility': 'error',
-    }
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+      "@typescript-eslint/explicit-member-accessibility": "error",
+    },
   },
   {
-    files: ['**/*.ts'],
+    files: ["**/*.ts"],
     plugins: { lit },
     rules: {
-      ...lit.configs['flat/recommended'].rules,
-      'lit/no-legacy-template-syntax': 'error',
-      'lit/no-property-change-update': 'error'
-    }
-  }
+      ...lit.configs["flat/recommended"].rules,
+      "lit/no-legacy-template-syntax": "error",
+      "lit/no-property-change-update": "error",
+    },
+  },
 ];
 ```
 
 ### playwright.config.ts
 
 ```typescript
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: './**/*.spec.tsx',
+  testDir: "./**/*.spec.tsx",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: "html",
   use: {
-    baseURL: 'http://localhost:8080',
-    trace: 'on-first-retry',
+    baseURL: "http://localhost:8080",
+    trace: "on-first-retry",
   },
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
   webServer: {
-    command: 'npx http-server . -p 8080 --cors -c-1',
+    command: "npx http-server . -p 8080 --cors -c-1",
     port: 8080,
     reuseExisting: true,
   },
@@ -902,9 +931,7 @@ export default defineConfig({
     "rootDir": "."
   },
   "include": ["*.ts"],
-  "references": [
-    { "path": "../other-component" }
-  ]
+  "references": [{ "path": "../other-component" }]
 }
 ```
 
@@ -912,7 +939,7 @@ export default defineConfig({
 
 ```typescript
 // vite.config.ts
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
 
 export default defineConfig({
   server: {
@@ -921,8 +948,8 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: './components/index.ts',
-      formats: ['es'],
+      entry: "./components/index.ts",
+      formats: ["es"],
     },
   },
 });

@@ -9,19 +9,20 @@ description: Use when listing files, searching file contents, finding files by n
 > Install: `npx skills add klh/skills --skill klh-cli-speed-tools`
 
 ## Overview
+
 Modern CLI tools provide 10-100x speed improvements over standard utilities while adding useful features like git status, syntax highlighting, and fuzzy search.
 
 ## Quick Reference
 
-| Task | Slow (avoid) | Fast (use) |
-|------|--------------|------------|
-| List files | `ls`, `ls -la` | `eza -la`, `eza --tree` |
-| Search content | `grep -r`, `find` | `rg` (ripgrep) |
-| Find files | `find` | `fd` |
-| View files | `cat` | `bat` |
-| Fuzzy search | — | `fzf` |
-| Kill processes | `kill`, `pkill` | `fk` (fkill) |
-| Dir navigation | `cd` everywhere | `z` (frequency-based) |
+| Task           | Slow (avoid)      | Fast (use)              |
+| -------------- | ----------------- | ----------------------- |
+| List files     | `ls`, `ls -la`    | `eza -la`, `eza --tree` |
+| Search content | `grep -r`, `find` | `rg` (ripgrep)          |
+| Find files     | `find`            | `fd`                    |
+| View files     | `cat`             | `bat`                   |
+| Fuzzy search   | —                 | `fzf`                   |
+| Kill processes | `kill`, `pkill`   | `fk` (fkill)            |
+| Dir navigation | `cd` everywhere   | `z` (frequency-based)   |
 
 ## When to Use
 
@@ -43,6 +44,7 @@ digraph cli_speed {
 ## Core Tools
 
 ### EZA (Modern ls)
+
 ```bash
 # Detailed list with icons, git status, dirs first
 eza -la --icons --git --group-directories-first
@@ -52,6 +54,7 @@ eza --tree --level=2 --git --icons
 ```
 
 ### Ripgrep (rg)
+
 ```bash
 # Search for pattern in all files
 rg "pattern"
@@ -64,6 +67,7 @@ rg "pattern" -t ts -t js
 ```
 
 ### FD (Fast find)
+
 ```bash
 # Find files by name
 fd "filename"
@@ -76,6 +80,7 @@ fd "pattern" --hidden
 ```
 
 ### BAT (Enhanced cat)
+
 ```bash
 # View file with syntax highlighting
 bat filename.txt
@@ -85,6 +90,7 @@ bat filename.txt -l 10-20
 ```
 
 ### FZF (Fuzzy finder)
+
 ```bash
 # Interactive file selection
 fzf
@@ -107,13 +113,13 @@ command -v bat && echo "bat available"
 
 ## Common Mistakes
 
-| Mistake | Fix |
-|---------|-----|
-| Using `ls -la` | Use `eza -la` or `l` alias |
-| Using `grep -r "pattern"` | Use `rg "pattern"` |
-| Using `find . -name "*.js"` | Use `fd "\.js$"` |
-| Using `cat file.txt` | Use `bat file.txt` |
-| Forgetting `--hidden` | Add it for fd/rg to search hidden files |
+| Mistake                     | Fix                                     |
+| --------------------------- | --------------------------------------- |
+| Using `ls -la`              | Use `eza -la` or `l` alias              |
+| Using `grep -r "pattern"`   | Use `rg "pattern"`                      |
+| Using `find . -name "*.js"` | Use `fd "\.js$"`                        |
+| Using `cat file.txt`        | Use `bat file.txt`                      |
+| Forgetting `--hidden`       | Add it for fd/rg to search hidden files |
 
 ## Real-World Impact
 

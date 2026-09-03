@@ -15,33 +15,35 @@ Single entry-point orchestrator. Detects what the user wants, picks the right sk
 ## Trigger Phrases
 
 Activates on:
+
 - "dispatch", "klh this", "run this through klh"
 - Any task where multiple skills could apply and you need to pick the right one
 - "use the right skill for this"
 
 SKIP when:
+
 - User already named a specific klh-* skill (let them control directly)
 - Task is a one-line fix (no skill needed)
 - User is asking a factual question
 
 ## Routing Table
 
-| User Intent | Dispatch To |
-|-------------|-------------|
-| List, search, find, or view files | `klh-cli-speed-tools` |
-| Find bugs, vulnerabilities, code quality | `klh-find-bugs` |
-| Debug unexpected behavior, test failure | `klh-systematic-debugging` |
-| Simplify, refactor, clean up code | `klh-code-simplifier` |
-| Write tests, mocking, TDD | `klh-testing-patterns` |
-| Validate data, API inputs, schemas | `klh-zod-validation` |
-| Build web components (Lit) | `klh-lit-dev` |
-| UI components, design tokens, design system | `klh-core-components` |
-| Public API specs, OpenAPI lookup | `klh-openapi-directory-first` |
-| Track project decisions, bugs, work history | `klh-project-memory` |
-| Create or update AGENTS.md | `klh-agents-md` |
-| Configure Claude Code settings | `klh-settings-audit` |
-| Multiple skills, verbosity, output style | `klh-all-skills` |
-| New feature or complex task (multi-skill) | Walk the loop below |
+| User Intent                                 | Dispatch To                   |
+| ------------------------------------------- | ----------------------------- |
+| List, search, find, or view files           | `klh-cli-speed-tools`         |
+| Find bugs, vulnerabilities, code quality    | `klh-find-bugs`               |
+| Debug unexpected behavior, test failure     | `klh-systematic-debugging`    |
+| Simplify, refactor, clean up code           | `klh-code-simplifier`         |
+| Write tests, mocking, TDD                   | `klh-testing-patterns`        |
+| Validate data, API inputs, schemas          | `klh-zod-validation`          |
+| Build web components (Lit)                  | `klh-lit-dev`                 |
+| UI components, design tokens, design system | `klh-core-components`         |
+| Public API specs, OpenAPI lookup            | `klh-openapi-directory-first` |
+| Track project decisions, bugs, work history | `klh-project-memory`          |
+| Create or update AGENTS.md                  | `klh-agents-md`               |
+| Configure Claude Code settings              | `klh-settings-audit`          |
+| Multiple skills, verbosity, output style    | `klh-all-skills`              |
+| New feature or complex task (multi-skill)   | Walk the loop below           |
 
 ## The Loop (Multi-Skill Tasks)
 
@@ -62,6 +64,7 @@ Identify which klh-* skills apply and in what order. List the skill chain.
 Invoke skills in order. Each skill owns its phase. The dispatcher does not implement — it delegates.
 
 After each skill completes:
+
 - Verify the skill's output (did it do what was asked?)
 - Check for Five Failure Modes (hallucinated actions, scope creep, cascading errors, context loss, tool misuse)
 - If clean, move to next skill in chain
@@ -78,6 +81,7 @@ Do NOT stage, commit, push, merge, or open PR. Wait for user direction.
 ## Mid-Flow Routing
 
 These can be invoked at any point without breaking the loop:
+
 - Bug discovered mid-task -> `klh-systematic-debugging`
 - Need API docs -> `klh-openapi-directory-first`
 - Code getting complex -> `klh-code-simplifier`
@@ -87,6 +91,7 @@ These can be invoked at any point without breaking the loop:
 ## Parallel Execution
 
 When the plan has 3+ independent tasks:
+
 1. Write a cohesion contract (shared types, interfaces, naming conventions)
 2. Spawn agents for each task with scope restrictions
 3. Each agent uses the appropriate klh-* skill

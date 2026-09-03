@@ -7,11 +7,11 @@ description: Operate Azure CLI (`az`) for authentication checks, subscription/co
 
 ## Intent Router
 
-| Request | Reference | Load When |
-| --- | --- | --- |
-| Install tool, first-time setup | `references/install-and-setup.md` | User needs to install Azure CLI or do initial configuration |
-| Command patterns, ARM/Bicep | `references/command-cookbook.md` | User needs resource patterns, ARM deployment, AKS, Key Vault, or RBAC examples |
-| Authentication, subscriptions | `references/auth-and-config.md` | User needs login setup, service principal, multi-tenant, or sovereign cloud configuration |
+| Request                        | Reference                         | Load When                                                                                 |
+| ------------------------------ | --------------------------------- | ----------------------------------------------------------------------------------------- |
+| Install tool, first-time setup | `references/install-and-setup.md` | User needs to install Azure CLI or do initial configuration                               |
+| Command patterns, ARM/Bicep    | `references/command-cookbook.md`  | User needs resource patterns, ARM deployment, AKS, Key Vault, or RBAC examples            |
+| Authentication, subscriptions  | `references/auth-and-config.md`   | User needs login setup, service principal, multi-tenant, or sovereign cloud configuration |
 
 ## Workflow
 
@@ -46,13 +46,13 @@ export AZURE_CONFIG_DIR=/tmp/az-config
 ## Core Command Tracks
 
 - Auth and subscription context:
-`az login`, `az account show`, `az account list --output table`, `az account set --subscription <id-or-name>`
+  `az login`, `az account show`, `az account list --output table`, `az account set --subscription <id-or-name>`
 - Resource group and inventory inspection:
-`az group list --output table`, `az resource list --resource-group <rg> --output table`
+  `az group list --output table`, `az resource list --resource-group <rg> --output table`
 - Deployment inspection:
-`az deployment group list --resource-group <rg> --output table`, `az deployment group show --resource-group <rg> --name <deployment>`
+  `az deployment group list --resource-group <rg> --output table`, `az deployment group show --resource-group <rg> --name <deployment>`
 - Output shaping and filters:
-Use `--query` and `--output json|table|yaml` for repeatable results.
+  Use `--query` and `--output json|table|yaml` for repeatable results.
 
 ## Safety Guardrails
 

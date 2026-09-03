@@ -37,6 +37,7 @@ Applies to any task involving code documentation, API specs, or developer-facing
 ## Quick-Reference Examples
 
 ### Google-style Docstring (Python)
+
 ```python
 def fetch_user(user_id: int, active_only: bool = True) -> dict:
     """Fetch a single user record by ID.
@@ -55,6 +56,7 @@ def fetch_user(user_id: int, active_only: bool = True) -> dict:
 ```
 
 ### NumPy-style Docstring (Python)
+
 ```python
 def compute_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
     """Compute cosine similarity between two vectors.
@@ -79,6 +81,7 @@ def compute_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
 ```
 
 ### JSDoc (TypeScript)
+
 ```typescript
 /**
  * Fetches a paginated list of products from the catalog.
@@ -104,20 +107,21 @@ async function fetchProducts(
 
 Load detailed guidance based on context:
 
-| Topic | Reference | Load When |
-|-------|-----------|-----------|
-| Python Docstrings | `references/python-docstrings.md` | Google, NumPy, Sphinx styles |
-| TypeScript JSDoc | `references/typescript-jsdoc.md` | JSDoc patterns, TypeScript |
-| FastAPI/Django API | `references/api-docs-fastapi-django.md` | Python API documentation |
-| NestJS/Express API | `references/api-docs-nestjs-express.md` | Node.js API documentation |
-| Coverage Reports | `references/coverage-reports.md` | Generating documentation reports |
-| Documentation Systems | `references/documentation-systems.md` | Doc sites, static generators, search, testing |
-| Interactive API Docs | `references/interactive-api-docs.md` | OpenAPI 3.1, portals, GraphQL, WebSocket, gRPC, SDKs |
-| User Guides & Tutorials | `references/user-guides-tutorials.md` | Getting started, tutorials, troubleshooting, FAQs |
+| Topic                   | Reference                               | Load When                                            |
+| ----------------------- | --------------------------------------- | ---------------------------------------------------- |
+| Python Docstrings       | `references/python-docstrings.md`       | Google, NumPy, Sphinx styles                         |
+| TypeScript JSDoc        | `references/typescript-jsdoc.md`        | JSDoc patterns, TypeScript                           |
+| FastAPI/Django API      | `references/api-docs-fastapi-django.md` | Python API documentation                             |
+| NestJS/Express API      | `references/api-docs-nestjs-express.md` | Node.js API documentation                            |
+| Coverage Reports        | `references/coverage-reports.md`        | Generating documentation reports                     |
+| Documentation Systems   | `references/documentation-systems.md`   | Doc sites, static generators, search, testing        |
+| Interactive API Docs    | `references/interactive-api-docs.md`    | OpenAPI 3.1, portals, GraphQL, WebSocket, gRPC, SDKs |
+| User Guides & Tutorials | `references/user-guides-tutorials.md`   | Getting started, tutorials, troubleshooting, FAQs    |
 
 ## Constraints
 
 ### MUST DO
+
 - Ask for format preference before starting
 - Detect framework for correct API doc strategy
 - Document all public functions/classes
@@ -127,6 +131,7 @@ Load detailed guidance based on context:
 - Generate coverage report
 
 ### MUST NOT DO
+
 - Assume docstring format without asking
 - Apply wrong API doc strategy for framework
 - Write inaccurate or untested documentation
@@ -137,6 +142,7 @@ Load detailed guidance based on context:
 ## Output Formats
 
 Depending on the task, provide:
+
 1. **Code Documentation:** Documented files + coverage report
 2. **API Docs:** OpenAPI specs + portal configuration
 3. **Doc Sites:** Site configuration + content structure + build instructions

@@ -111,14 +111,14 @@ zparseopts -D -E -- opt1 opt2=ARG   # parse script flags
 
 ## Safety Notes
 
-| Area | Guardrail |
-| --- | --- |
-| Startup files | `.zshenv` loads for every shell; `.zshrc` interactive only; `.zprofile` login only. Prefer `zsh -f` to skip all startup files when isolating. |
+| Area                | Guardrail                                                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Startup files       | `.zshenv` loads for every shell; `.zshrc` interactive only; `.zprofile` login only. Prefer `zsh -f` to skip all startup files when isolating.           |
 | Option side-effects | `setopt GLOB_DOTS`, `NULL_GLOB`, `EXTENDED_GLOB` change globbing globally; test with `zsh -f -O <option>` to verify behavior before adding to `.zshrc`. |
-| Completion init | Call `compinit` only once per session; duplicate calls cause slowness. Use `~/.zcompdump*` caching. |
-| `emulate` scope | Use `emulate -L zsh` inside functions to avoid leaking option changes to the parent shell. |
-| History | `HISTFILE` and `SAVEHIST` must both be set for history to save. `setopt SHARE_HISTORY` affects all sessions. |
-| macOS system zsh | `/bin/zsh` is 5.9 on macOS 15; Apple cannot update it. Install via Homebrew for latest features. |
+| Completion init     | Call `compinit` only once per session; duplicate calls cause slowness. Use `~/.zcompdump*` caching.                                                     |
+| `emulate` scope     | Use `emulate -L zsh` inside functions to avoid leaking option changes to the parent shell.                                                              |
+| History             | `HISTFILE` and `SAVEHIST` must both be set for history to save. `setopt SHARE_HISTORY` affects all sessions.                                            |
+| macOS system zsh    | `/bin/zsh` is 5.9 on macOS 15; Apple cannot update it. Install via Homebrew for latest features.                                                        |
 
 Recovery note: if `zsh` is unavailable, stop at install guidance unless the task is truly POSIX-only. Do not silently map Zsh completion, ZLE, or option behavior onto `bash`.
 

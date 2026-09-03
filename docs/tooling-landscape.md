@@ -7,18 +7,18 @@ Everything below fed a concrete change; "adopted" marks what's in this repo.
 
 ## 1. Post-edit syntax gates — measured, per language
 
-| Language | Gate | Measured | Adopted |
-|---|---|---|---|
-| JSON | `jq empty f` | 3.2ms | ✅ (jsonc → biome lint) |
-| Shell | `bash -n f` | 2.4ms | ✅ (+ shellcheck 21ms as lint, not gate) |
-| TS/TSX/JSX/JS | `esbuild f --outfile=/dev/null` | **6.8ms** | ✅ tier 1 (parse-only, TS-native) |
-| TS types | project `tsc --noEmit` (tsc 7 native: 58ms single file) | 58ms | ✅ tier 2, resolution errors filtered |
-| Python | `ruff check --no-cache f` | **9.6ms** | ✅ (replaced `python3 ast.parse` 22.5ms) |
-| YAML | `yq e '.' f >/dev/null` | 6.3ms | ✅ |
-| TOML | `taplo check f` | 9.1ms | ✅ |
-| CSS | `biome lint f` (NOT `biome check` — fails on formatting) | 9.5ms | ✅ |
-| C# | Roslyn `csc.dll @rsp` | 212ms | noted (rsp per-TFM; `dotnet format` 2.42s is unusable per-edit) |
-| SQL | `sqlglot.parse` | 74ms | noted (sqlfluff false-positives on style — linter, not gate) |
+| Language      | Gate                                                     | Measured  | Adopted                                                         |
+| ------------- | -------------------------------------------------------- | --------- | --------------------------------------------------------------- |
+| JSON          | `jq empty f`                                             | 3.2ms     | ✅ (jsonc → biome lint)                                         |
+| Shell         | `bash -n f`                                              | 2.4ms     | ✅ (+ shellcheck 21ms as lint, not gate)                        |
+| TS/TSX/JSX/JS | `esbuild f --outfile=/dev/null`                          | **6.8ms** | ✅ tier 1 (parse-only, TS-native)                               |
+| TS types      | project `tsc --noEmit` (tsc 7 native: 58ms single file)  | 58ms      | ✅ tier 2, resolution errors filtered                           |
+| Python        | `ruff check --no-cache f`                                | **9.6ms** | ✅ (replaced `python3 ast.parse` 22.5ms)                        |
+| YAML          | `yq e '.' f >/dev/null`                                  | 6.3ms     | ✅                                                              |
+| TOML          | `taplo check f`                                          | 9.1ms     | ✅                                                              |
+| CSS           | `biome lint f` (NOT `biome check` — fails on formatting) | 9.5ms     | ✅                                                              |
+| C#            | Roslyn `csc.dll @rsp`                                    | 212ms     | noted (rsp per-TFM; `dotnet format` 2.42s is unusable per-edit) |
+| SQL           | `sqlglot.parse`                                          | 74ms      | noted (sqlfluff false-positives on style — linter, not gate)    |
 
 Key findings: `node --check` rejects valid TS (JS only). swc has no parse-only
 CLI. `deno check` 268ms. tsc 7 native type-checks a lone file in 58ms and
@@ -54,6 +54,7 @@ tokei if complexity metrics are ever wanted.
 ## 4. Persona effectiveness patterns (evidence-based)
 
 Adopted across all 8 personas:
+
 - **`model:` pinning** — subagents inherit the session model by default;
   unpinned personas silently run on the expensive model. haiku for
   drafting/lookup (growth-marketer), sonnet for everyday (reviewer, tester,

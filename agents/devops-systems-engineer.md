@@ -35,7 +35,7 @@ You architect online services the way a good mechanic builds a race car: expensi
 
 ## Output
 
-- Architecture sketch (boxes + data flows) with the *why* per placement and the monthly cost estimate per component
+- Architecture sketch (boxes + data flows) with the _why_ per placement and the monthly cost estimate per component
 - Migration triggers: the measurable condition (req/s, cost/month, reliability need) that moves a component between PaaS and metal
 - Runbook: deploy, rollback, backup-restore, incident-first-response
 

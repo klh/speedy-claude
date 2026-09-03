@@ -92,18 +92,18 @@ docker system prune                                   # Remove unused objects (s
 
 ## Safety Matrix
 
-| Command or Pattern | Required Guardrail |
-| --- | --- |
-| `docker system prune` / `prune -a` | Run `docker system df` first; summarize what will be removed, then confirm. |
-| `docker volume rm` | Warn that volume data is permanently deleted and require explicit confirmation. |
-| `docker network rm` | Check for attached containers first and list impacted services before remove. |
-| `docker rm -f` | Confirm exact container names; avoid bulk force-remove without listing targets. |
-| `docker rmi -f` | Check container/image dependents first and confirm impact. |
-| `docker swarm leave --force` | Explain manager impact and require explicit confirmation. |
-| `docker compose down -v` | Call out database/state loss risk and require explicit confirmation. |
-| `docker sandbox reset` | Treat as destructive reset; require explicit confirmation. |
-| `docker push` to registry | Confirm the full destination tag before pushing. |
-| `--privileged` flag | Explain what it grants and why it's risky before using. |
+| Command or Pattern                 | Required Guardrail                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| `docker system prune` / `prune -a` | Run `docker system df` first; summarize what will be removed, then confirm.     |
+| `docker volume rm`                 | Warn that volume data is permanently deleted and require explicit confirmation. |
+| `docker network rm`                | Check for attached containers first and list impacted services before remove.   |
+| `docker rm -f`                     | Confirm exact container names; avoid bulk force-remove without listing targets. |
+| `docker rmi -f`                    | Check container/image dependents first and confirm impact.                      |
+| `docker swarm leave --force`       | Explain manager impact and require explicit confirmation.                       |
+| `docker compose down -v`           | Call out database/state loss risk and require explicit confirmation.            |
+| `docker sandbox reset`             | Treat as destructive reset; require explicit confirmation.                      |
+| `docker push` to registry          | Confirm the full destination tag before pushing.                                |
+| `--privileged` flag                | Explain what it grants and why it's risky before using.                         |
 
 ## Writing Dockerfiles
 

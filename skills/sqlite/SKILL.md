@@ -27,16 +27,16 @@ If `sqlite3` is missing, surface that first and point to `scripts/install.sh` or
 
 ## Intent Router
 
-| Request | Reference | Load When |
-| --- | --- | --- |
-| Install tool, first-time setup | `references/install-and-setup.md` | User needs to install sqlite3, sqldiff, sqlite3_rsync, or do initial configuration |
-| Read-only queries, health checks, backups | `references/core-workflows.md` | User needs basic database operations and safe defaults |
-| Schema/data diffing, database sync, migrations | `references/diff-and-sync.md` | User needs to compare schemas, synchronize replicas, or validate migrations |
-| Python/Node integration, smoke tests | `references/integration-python-node.md` | User needs to verify database behavior in application code |
-| Migration validation and planning | `references/migrations.md` | User needs to validate migration scripts on cloned databases |
-| SQL patterns, query strategies | `references/sql-patterns.md` | User needs complex query help or optimization guidance |
-| Safety, locking, concurrency | `references/safety-and-locking.md` | User needs to understand locking, transactions, and safe concurrent access |
-| SQLite documentation reference | `references/sqlite-doc-map.md` | User needs quick links to official SQLite documentation |
+| Request                                        | Reference                               | Load When                                                                          |
+| ---------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
+| Install tool, first-time setup                 | `references/install-and-setup.md`       | User needs to install sqlite3, sqldiff, sqlite3_rsync, or do initial configuration |
+| Read-only queries, health checks, backups      | `references/core-workflows.md`          | User needs basic database operations and safe defaults                             |
+| Schema/data diffing, database sync, migrations | `references/diff-and-sync.md`           | User needs to compare schemas, synchronize replicas, or validate migrations        |
+| Python/Node integration, smoke tests           | `references/integration-python-node.md` | User needs to verify database behavior in application code                         |
+| Migration validation and planning              | `references/migrations.md`              | User needs to validate migration scripts on cloned databases                       |
+| SQL patterns, query strategies                 | `references/sql-patterns.md`            | User needs complex query help or optimization guidance                             |
+| Safety, locking, concurrency                   | `references/safety-and-locking.md`      | User needs to understand locking, transactions, and safe concurrent access         |
+| SQLite documentation reference                 | `references/sqlite-doc-map.md`          | User needs quick links to official SQLite documentation                            |
 
 ## Workflow
 

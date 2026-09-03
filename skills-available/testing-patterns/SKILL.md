@@ -8,18 +8,21 @@ description: Jest testing patterns, factory functions, mocking strategies, and T
 ## Testing Philosophy
 
 **Test-Driven Development (TDD):**
+
 - Write failing test FIRST
 - Implement minimal code to pass
 - Refactor after green
 - Never write production code without a failing test
 
 **Behavior-Driven Testing:**
+
 - Test behavior, not implementation
 - Focus on public APIs and business requirements
 - Avoid testing implementation details
 - Use descriptive test names that describe behavior
 
 **Factory Pattern:**
+
 - Create `getMockX(overrides?: Partial<X>)` functions
 - Provide sensible defaults
 - Allow overriding specific properties
@@ -44,6 +47,7 @@ export const renderWithTheme = (ui: React.ReactElement) => {
 ```
 
 **Usage:**
+
 ```typescript
 import { renderWithTheme } from 'utils/testUtils';
 import { screen } from '@testing-library/react-native';
@@ -115,29 +119,28 @@ it('should display admin badge for admin users', () => {
 
 ```typescript
 // Mock entire module
-jest.mock('utils/analytics');
+jest.mock("utils/analytics");
 
 // Mock with factory function
-jest.mock('utils/analytics', () => ({
+jest.mock("utils/analytics", () => ({
   Analytics: {
     logEvent: jest.fn(),
   },
 }));
 
 // Access mock in test
-const mockLogEvent = jest.requireMock('utils/analytics').Analytics.logEvent;
+const mockLogEvent = jest.requireMock("utils/analytics").Analytics.logEvent;
 ```
 
 ### Mocking GraphQL Hooks
 
 ```typescript
-jest.mock('./GetItems.generated', () => ({
+jest.mock("./GetItems.generated", () => ({
   useGetItemsQuery: jest.fn(),
 }));
 
-const mockUseGetItemsQuery = jest.requireMock(
-  './GetItems.generated'
-).useGetItemsQuery as jest.Mock;
+const mockUseGetItemsQuery = jest.requireMock("./GetItems.generated")
+  .useGetItemsQuery as jest.Mock;
 
 // In test
 mockUseGetItemsQuery.mockReturnValue({
@@ -150,22 +153,22 @@ mockUseGetItemsQuery.mockReturnValue({
 ## Test Structure
 
 ```typescript
-describe('ComponentName', () => {
+describe("ComponentName", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('Rendering', () => {
-    it('should render component with default props', () => {});
-    it('should render loading state when loading', () => {});
+  describe("Rendering", () => {
+    it("should render component with default props", () => {});
+    it("should render loading state when loading", () => {});
   });
 
-  describe('User interactions', () => {
-    it('should call onPress when button is clicked', async () => {});
+  describe("User interactions", () => {
+    it("should call onPress when button is clicked", async () => {});
   });
 
-  describe('Edge cases', () => {
-    it('should handle empty data gracefully', () => {});
+  describe("Edge cases", () => {
+    it("should handle empty data gracefully", () => {});
   });
 });
 ```
@@ -174,14 +177,14 @@ describe('ComponentName', () => {
 
 ```typescript
 // Element must exist
-expect(screen.getByText('Hello')).toBeTruthy();
+expect(screen.getByText("Hello")).toBeTruthy();
 
 // Element should not exist
-expect(screen.queryByText('Goodbye')).toBeNull();
+expect(screen.queryByText("Goodbye")).toBeNull();
 
 // Element appears asynchronously
 await waitFor(() => {
-  expect(screen.findByText('Loaded')).toBeTruthy();
+  expect(screen.findByText("Loaded")).toBeTruthy();
 });
 ```
 
@@ -213,22 +216,22 @@ it('should submit form on button click', async () => {
 expect(mockFetchData).toHaveBeenCalled();
 
 // Good - testing actual behavior
-expect(screen.getByText('John Doe')).toBeTruthy();
+expect(screen.getByText("John Doe")).toBeTruthy();
 ```
 
 ### Not Using Factories
 
 ```typescript
 // Bad - duplicated, inconsistent test data
-it('test 1', () => {
-  const user = { id: '1', name: 'John', email: 'john@test.com', role: 'user' };
+it("test 1", () => {
+  const user = { id: "1", name: "John", email: "john@test.com", role: "user" };
 });
-it('test 2', () => {
-  const user = { id: '2', name: 'Jane', email: 'jane@test.com' }; // Missing role!
+it("test 2", () => {
+  const user = { id: "2", name: "Jane", email: "jane@test.com" }; // Missing role!
 });
 
 // Good - reusable factory
-const user = getMockUser({ name: 'Custom Name' });
+const user = getMockUser({ name: "Custom Name" });
 ```
 
 ## Best Practices
