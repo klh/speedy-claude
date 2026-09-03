@@ -1,0 +1,44 @@
+name: validate
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell syntax — all hooks + installer
+        run: |
+          bash -n install.sh
+          for f in hooks/*.sh; do bash -n "$f" || exit 1; done
+
+      - name: JSON — settings template + vendored OpenAPI spec
+        run: |
+          jq empty settings.example.json
+          jq empty skills/dinero-regnskab/references/openapi.json
+
+      - name: launchd plist
+        run: plutil -lint hooks/launchd/com.klh.claude-insights.plist
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Markdown (GFM, prettier)
+        run: npx --yes prettier@3 --check --prose-wrap preserve "*.md" "skills/*/SKILL.md" "skills-available/*/SKILL.md" "docs/*.md"
+
+      - name: Skill frontmatter sanity (name + description present)
+        run: |
+          for f in skills/*/SKILL.md; do
+            head -1 "$f" | grep -q '^---$' || { echo "missing frontmatter: $f"; exit 1; }
+            grep -q '^name:' "$f" || { echo "missing name: $f"; exit 1; }
+            grep -q '^description:' "$f" || { echo "missing description: $f"; exit 1; }
+          done
+
+      - name: Secrets scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
