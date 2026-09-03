@@ -21,7 +21,7 @@ jobs:
           jq empty skills/dinero-regnskab/references/openapi.json
 
       - name: launchd plist
-        run: plutil -lint hooks/launchd/com.klh.claude-insights.plist
+        run: python3 -c "import plistlib; plistlib.load(open('hooks/launchd/com.klh.claude-insights.plist','rb')); print('plist ok')"
 
       - uses: actions/setup-node@v4
         with:
