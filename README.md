@@ -33,7 +33,7 @@ Tested on a real codebase (733 TypeScript files, ~2500 total files, Apple M-seri
 
 | Operation | Files | Claude Default | CLI Pipeline | Speedup |
 |-----------|-------|---------------|-------------|---------|
-| Multi-file find & replace | 47 | Read+Edit ~95s | `rg \| sad -k` 67ms | **~1400x** |
+| Multi-file find & replace | 47 | Read+Edit ~95s | `rg -l -0 \| xargs -0 -P8 sd` sub-second | **~100x** |
 | Codebase-wide rename | 538 | ~538s sequential | `ambr` 490ms | **~1100x** |
 | **Structural rename (strings/comments untouched)** | 2+ | `ambr` (rewrites strings too) | `ast-grep run -p 'old($A)' -r 'new($A)' --lang ts -U` | **correct where text tools are wrong** |
 | Count pattern matches | 346 | Grep+Read+count ~5s | `rg -c \| awk` 54ms | **~90x** |
@@ -49,7 +49,7 @@ Tested on a real codebase (733 TypeScript files, ~2500 total files, Apple M-seri
 |-------|-----------|
 | Surgical edit | Claude Code **Edit** tool — unique context anchor, ambiguity fails loudly, auto-accepted (`acceptEdits`) |
 | New/whole file | **Write** tool |
-| Textual bulk replace | `sd` (regex) · `ambr`/`ambs` (parallel) · `sad` (diff preview) |
+| Textual bulk replace | `sd` (regex) · `ambr`/`ambs` (parallel, with `--statistics`) |
 | Structural replace | `ast-grep` — AST nodes only; strings and comments stay untouched |
 | Structured config | `jq` (JSON) · `yq` (YAML/TOML/XML) |
 | Enforcement | `hooks/edit-enforce.sh` denies `cat > f`, `cat >> f`, `sed -i`, `perl -i`; nudges heredoc rewriters toward Edit/Write |
@@ -73,11 +73,11 @@ Register them via `settings.example.json` (below).
 
 `settings.example.json` is a ready template: GLM/z.ai (or any Anthropic-compatible) env vars, `acceptEdits`, an evidence-based allowlist (fast CLI tools + `npm test`/`dotnet test`/`git fetch`/`npx tsc --noEmit`), and deny guardrails (`sudo rm`, force-push, `rm -rf ~/*`). Copy to `~/.claude/settings.json`, fill the token, adjust to your stack.
 
-## Skills — 19 active, curated
+## Skills — 20 active, curated
 
 A 2026-09 audit (`skillUsage` telemetry across months of sessions) found ~half the original skill pack was never invoked — pure context cost in every session. The active set is curated; the rest are parked in [`skills-available/`](skills-available/README.md) with a restore command (`git mv skills-available/<name> skills/`). Parked skills cost zero context.
 
-Highlights: `cli-speed-tools` · `code-simplifier` · `find-bugs` · `lit-dev` · `core-components` · `zod4` · `test-driven-development` · `systematic-debugging` · `openapi-directory-first` · `browser-testing-with-devtools` · `settings-audit` · `project-memory` — full table in CLAUDE.md's *Skills Quick Reference*.
+Highlights: `ast-grep` (structural search rules) · `cli-speed-tools` · `code-simplifier` · `find-bugs` · `lit-dev` · `core-components` · `zod4` · `test-driven-development` · `systematic-debugging` · `openapi-directory-first` · `browser-testing-with-devtools` · `settings-audit` · `project-memory` — full table in CLAUDE.md's *Skills Quick Reference*.
 
 ## Slash Commands
 
@@ -97,6 +97,10 @@ Highlights: `cli-speed-tools` · `code-simplifier` · `find-bugs` · `lit-dev` �
 | [code-reviewer](agents/code-reviewer.md) | Senior Staff Engineer | Five-axis code review |
 | [test-engineer](agents/test-engineer.md) | QA Specialist | Test strategy, coverage analysis |
 | [security-auditor](agents/security-auditor.md) | Security Engineer | Vulnerability detection, OWASP |
+| [minimalist-designer](agents/minimalist-designer.md) | Modernist Minimalist | A11y + DOM mastery, strict palettes, retro-minimal when it fits |
+| [growth-marketer](agents/growth-marketer.md) | Low-Budget Growth | Offers, SEO/email flywheels, merch and product launches |
+| [outreach-strategist](agents/outreach-strategist.md) | Research-First Outreach | Context sheets, tailored cold email, sequence design |
+| [devops-systems-engineer](agents/devops-systems-engineer.md) | PaaS × Bare Metal | Fast flight + low cost, hybrid hosting, runbooks |
 
 ## Code style this repo encodes
 

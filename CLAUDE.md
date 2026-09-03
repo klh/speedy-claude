@@ -59,10 +59,10 @@ Textual bulk replaces stay with `sd`/`ambr`; `ast-grep` for anything identifier/
 | `python3 -c` for JSON parsing | `jq` (native C, ~6x faster than Python startup) |
 | `sed` for find/replace | `sd` (Rust, literal by default, regex with `-s`, no BSD `-i ''` tax) |
 | `find \| xargs sed` across codebase | `amber` (parallel Rust, interactive per-match, ignores .git) |
-| Need diff preview before replace | `sad` (Rust, shows colored diff before applying) |
+| Need stats on a bulk replace | `ambr --statistics --no-interactive` (per-file counts + timing) |
 | `| while read` loops | Single command + pipe to `jq`/`xargs` |
 | `du` for disk usage | `dust` (visual treemap) or `gdu` (interactive TUI) |
-| `du -sh` (total only) | `diskus` (fastest) |
+| `du -sh` (total only) | `dust -d 1` |
 | `ps` for processes | `procs` (colored, searchable) or `btm` (graphs) |
 | `diff` for comparing files | `difft` (structural AST-aware diff) |
 | `git diff` raw output | `difft` or `batdiff` or `delta` (syntax-highlighted) |
@@ -119,7 +119,7 @@ Textual bulk replaces stay with `sd`/`ambr`; `ast-grep` for anything identifier/
 
 **Codebase-wide replace: prefer `amber` over `find | xargs sd`.** Amber divides large files and searches in parallel — faster at scale. `ambr 'old' 'new'` for interactive whole-codebase replace, `ambr --regex 'foo(\w+)' 'bar$1'` for capture groups. Ignores `.git` by default.
 
-**Diff-preview replace: use `sad`.** Shows colored diff of every change before applying — `sd` + `git diff` combined. `rg -n 'pattern' --type ts | sad -e 'old' 'new' -k` searches + replaces across all matches in one pipeline. With `-k` it auto-applies; without it shows interactive fzf preview. Ideal for verifying transformations before committing.
+**Bulk replace with stats: use `ambr`.** `ambr 'old' 'new' --statistics --no-interactive` shows per-file counts and timing — check the blast radius before committing. `fd -x sd` is the scripted equivalent.
 
 **Disk usage: use `dust`.** Replaces iterative `du` + `ls` exploration. `dust` shows instant visual treemap of disk usage. `dust node_modules/` for specific dirs, `dust -n 20` for top 20.
 
@@ -134,7 +134,7 @@ Textual bulk replaces stay with `sd`/`ambr`; `ast-grep` for anything identifier/
 | Literal replace | 47 | `sed -i ''` 1102ms | `sd` 966ms | 1.1x |
 | Regex replace | 346 | `sed -E -i ''` 1530ms | `sd -s` 921ms | **1.7x** |
 | Codebase-wide rename | 538 | `fd -x sed` 1642ms | `amber` 490ms | **3.3x** |
-| Search+replace pipeline | 47 | Claude Read+Edit ~95s | `rg \| sad -k` 67ms | **~1400x** |
+| Search+replace pipeline | 47 | Claude Read+Edit ~95s | `rg -l -0 --type ts \| xargs -0 -P8 sd` sub-second | **~100x** |
 | File listing | 733 | `find` 3573ms | `fd` 56ms | **64x** |
 | Parallel vs sequential (sd) | 538 | `fd --threads=1 -x sd` ~3269ms | `fd -x sd` ~1109ms | **3x** |
 | Best bulk replace | 538 | `fd -x sd` ~1109ms | `amber` ~658ms | **1.7x** |
@@ -144,7 +144,7 @@ Textual bulk replaces stay with `sd`/`ambr`; `ast-grep` for anything identifier/
 | Count occurrences | 346 | Grep+Read+count ~5s | `rg -c \| awk` 54ms | **~90x** |
 
 The key insights:
-1. **Claude's Read+Edit does one file at a time with ~0.5-1s tool call overhead.** For multi-file work, use a single pipeline (`rg | sad`, `fd -x sd`, or `ambr`) — **~1400x faster**.
+1. **Claude's Read+Edit does one file at a time with ~0.5-1s tool call overhead.** For multi-file work, use a single pipeline (`rg | xargs sd`, `fd -x sd`, or `ambr`) — **100-1100x faster**.
 2. **Parallelism matters.** `fd -x` runs in parallel by default. Sequential (`--threads=1`) is **3x slower** on this machine.
 3. **amber wins for bulk replace.** Parallel file splitting + 10 threads = fastest codebase-wide rename.
 4. **Single-command patterns** replace multi-step tool chains. `rg -c | awk` replaces Grep + Read + count. `difft --stat` replaces `git diff` + Read context files.
@@ -176,13 +176,13 @@ The key insights:
 | Azure DevOps web UI | `az` CLI (`az repos`, `az pipelines`, etc.) |
 | Manual branch cleanup | `commit-commands:clean_gone` skill |
 | Raw `git diff` output | `difft main...HEAD` or `batdiff` |
-| Multiple `git show` for history | `git-standup` or `git log -L :func:file.ts` |
+| Multiple `git show` for history | `git log --since="1 day ago" --oneline` or `git log -L :func:file.ts` |
 | Manual GitHub Actions testing | `act` (run GH Actions locally) |
 | Manual CI YAML validation | `actionlint` (static checker) |
 
 **`gh` is installed.** Use it for all GitHub operations: PRs, issues, releases, actions, reviews.
 **`az` is installed.** Use it for all Azure DevOps operations: repos, pipelines, work items.
-**`git-standup` is installed.** `git-standup -f "path/file.ts"` for recent activity on a file.
+**Git archaeology:** `git log --since="1 day ago" --oneline` for recent activity; `git log -L :func:file.ts -p | difft` for function history.
 **`act` is installed.** `act -j lint --dryrun` to test GitHub Actions locally.
 **`actionlint` is installed.** `fd '\.yml$' .github/workflows | xargs actionlint` to validate CI.
 
@@ -199,7 +199,7 @@ When a change affects 2+ files, use a single CLI pipeline instead of sequential 
 WRONG: Grep → Read file1 → Edit file1 → Read file2 → Edit file2 → ... (N×2 tool calls)
 RIGHT: ambr 'old' 'new'                                    (1 command)
 RIGHT: fd -e ts | xargs sd 'old' 'new'                     (1 command)
-RIGHT: rg -n 'old' --type ts | sad -e 'old' 'new' -k      (1 pipeline)
+RIGHT: rg -l -0 'old' --type ts | xargs -0 sd 'old' 'new'    (1 pipeline)
 ```
 
 ### Rule 2: Use structural diffs for all code review
@@ -221,12 +221,12 @@ RIGHT: batgrep 'myFunc' --context 5                        (1 command, highlight
 RIGHT: rg -n 'myFunc' | fzf --preview 'bat --highlight-line {2} {1}'
 ```
 
-### Rule 4: Use git-standup and git log -L for archaeology
+### Rule 4: Use git log --since and -L for archaeology
 When investigating file/function history, avoid multiple git show calls.
 
 ```
 WRONG: git log file.ts → git show hash1 → git show hash2  (3+ calls)
-RIGHT: git-standup -f "path/file.ts"                       (recent activity)
+RIGHT: git log --since="1 day ago" --oneline               (recent activity)
 RIGHT: git log -L :myFunc:path/file.ts -p | difft          (function history)
 ```
 
@@ -286,7 +286,7 @@ RIGHT: npm test && qlty check && difft main...HEAD
 | **Search+context** | `batgrep` | `rg` + `Read` |
 | **Find/replace** | `sd` | `sed` |
 | **Bulk replace** | `ambr`/`ambs` (amber) | `find \| xargs sed` |
-| **Preview replace** | `sad` | `sed` + manual diff |
+| **Bulk replace stats** | `ambr --statistics` | blind bulk replaces |
 | **Structural replace** | `ast-grep` (`sg`) | regex renames that must ignore strings & comments |
 | **Universal linter** | `qlty` | 68 linters, one diff-aware command |
 | **JS/TS lint+fmt** | `biome` | eslint+prettier in one Rust binary |
@@ -306,28 +306,27 @@ RIGHT: npm test && qlty check && difft main...HEAD
 | **File watcher** | `watchexec`, `fswatch` | `watch` (smarter rerun on change) |
 | **Benchmarking** | `hyperfine` | manual `time` (statistical analysis) |
 | **JSON** | `jq` | `python3 -c` |
-| **Python** | `uv` | `pip` / `venv` |
+| **Python** | `uv` | `pip` / `venv` (10-100x faster) |
 | **HTTP** | `xh` | `curl` |
 | **HTTP (multi)** | `hurl` | sequential curl |
-| **HTTP (fancy)** | `curlie`, `httpie` | `curl` interactive |
+| **HTTP (fancy)** | `httpie` | `curl` interactive |
 | **Downloads** | `aria2` | `wget` |
 | **GitHub** | `gh` | web UI |
 | **Azure** | `az` | web UI |
 | **GH Actions local** | `act` | push-to-test |
 | **CI lint** | `actionlint` | manual YAML review |
 | **Shell lint** | `shellcheck` | manual review |
-| **Git activity** | `git-standup` | multiple `git show` |
+| **Git activity** | `git log --since` aliases | multiple `git show` |
 | **Fuzzy find** | `fzf` | manual file picking |
 | **Glamour shell** | `gum` | basic shell prompts |
 | **Tree view** | `tree` | recursive `ls` |
-| **Process monitor** | `btop`, `htop` | `top` |
-| **Container TUI** | `lazydocker`, `ctop` | docker CLI |
+| **Process monitor** | `btop` | `top` |
+| **Container TUI** | `lazydocker` | docker CLI |
 | **File manager** | `ranger` | GUI file manager |
 | **Editor** | `micro` | `nano` |
 | **Man pages** | `batman` | `man` |
 | **Static server** | `serve` | python/http server |
 | **TLS certs** | `mkcert` | manual openssl |
-| **API fuzzing** | `schemathesis` | manual API testing |
 | **Terraform** | `terraform` | — |
 | **Protobuf** | `protoc` | — |
 | **OCR** | `tesseract` | — |
@@ -351,7 +350,7 @@ RIGHT: npm test && qlty check && difft main...HEAD
 
 ## Available Skills Quick Reference
 
-19 active skills (optional ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
+20 active skills (optional ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
 
 ### Editing & Code Intelligence
 
@@ -360,6 +359,7 @@ RIGHT: npm test && qlty check && difft main...HEAD
 | `cli-speed-tools` | ANY terminal file operation — listing, searching, reading files |
 | `code-simplifier` | Simplifying, refactoring, or cleaning up existing code |
 | `find-bugs` | Reviewing changes for bugs, security vulnerabilities, code quality |
+| `ast-grep` | Writing ast-grep rules for structural code search/rewrite beyond text search |
 | `openapi-directory-first` | Working with ANY public API — check openapi-directory before training data or web search |
 
 ### Frontend & UI

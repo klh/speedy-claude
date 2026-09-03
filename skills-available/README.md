@@ -16,7 +16,7 @@ git mv skills-available/<name> skills/
 | Unused workflow guides | `api-and-interface-design`, `ci-cd-and-automation`, `code-documenter`, `code-review-and-quality`, `code-simplification`, `debugging-and-error-recovery`, `deprecation-and-migration`, `documentation-and-adrs`, `frontend-ui-engineering`, `idea-refine`, `incremental-implementation`, `performance-optimization`, `planning-and-task-breakdown`, `security-and-hardening`, `shipping-and-launch` | Never invoked in months of session telemetry (`skillUsage`); ~60% of every session's fixed context cost with zero value |
 | Duplicate of klh-* variant | `testing-patterns` | If you install the companion [klh/skills](https://github.com/klh/skills) repo, prefer `klh-testing-patterns` |
 
-## Active set (19)
+## Active set (20, incl. the ast-grep skill added 2026-09)
 
 `agents-md` · `browser-testing-with-devtools` · `cli-speed-tools` ·
 `code-simplifier` · `context-engineering` · `core-components` · `find-bugs` ·

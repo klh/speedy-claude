@@ -29,14 +29,12 @@
       "Bash(btm:*)",
       "Bash(delta:*)",
       "Bash(difft:*)",
-      "Bash(diskus:*)",
       "Bash(doggo:*)",
       "Bash(dust:*)",
       "Bash(eza:*)",
       "Bash(fd:*)",
       "Bash(fswatch:*)",
       "Bash(gh:*)",
-      "Bash(git-standup:*)",
       "Bash(hurl:*)",
       "Bash(hyperfine:*)",
       "Bash(jq:*)",
@@ -45,7 +43,6 @@
       "Bash(procs:*)",
       "Bash(qlty:*)",
       "Bash(rg:*)",
-      "Bash(sad:*)",
       "Bash(sd:*)",
       "Bash(sg:*)",
       "Bash(serve:*)",
@@ -76,7 +73,10 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "bash $HOME/.claude/hooks/session-start.sh" }
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/session-start.sh"
+          }
         ]
       }
     ],
@@ -84,13 +84,19 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "bash $HOME/.claude/hooks/edit-enforce.sh" }
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/edit-enforce.sh"
+          }
         ]
       },
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "bash $HOME/.claude/hooks/tool-enforce.sh" }
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/tool-enforce.sh"
+          }
         ]
       }
     ],
@@ -98,7 +104,10 @@
       {
         "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
-          { "type": "command", "command": "bash $HOME/.claude/hooks/syntax-check.sh" }
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/syntax-check.sh"
+          }
         ]
       }
     ]

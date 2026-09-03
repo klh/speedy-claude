@@ -59,10 +59,12 @@ BREW_TOOLS=(
 
   # Git & dev
   lazygit         # git TUI — interactive staging, rebase
+  lazydocker      # docker TUI — containers, logs, stats
+  fzf             # fuzzy finder — file pickers, preview patterns in CLAUDE.md
+  uv              # fast Python packaging — pip/venv replacement
   act             # run GitHub Actions locally
   actionlint      # lint GitHub Actions YAML
   shellcheck      # lint shell scripts
-  git-standup     # recent git activity by author
 
   # File ops & monitoring
   fswatch         # file change watcher
@@ -96,7 +98,6 @@ done
 
 CARGO_TOOLS=(
   "amber"         # ambr/ambs — parallel codebase-wide search & replace
-  "sad"           # diff-preview find & replace
 )
 
 info "Installing cargo packages..."
@@ -137,6 +138,19 @@ else
   else
     warn "Unsupported platform for qlty auto-install — see https://github.com/qltysh/qlty/releases"
   fi
+fi
+
+# ─── Optional MCP binaries (Claude Code extras) ──────────
+
+if command -v npm >/dev/null 2>&1; then
+  if command -v chrome-devtools-mcp >/dev/null 2>&1; then
+    echo "  ✓ chrome-devtools-mcp (already installed)"
+  else
+    echo "  → chrome-devtools-mcp (browser testing MCP)..."
+    npm install -g chrome-devtools-mcp 2>/dev/null || warn "chrome-devtools-mcp install failed (npm)"
+  fi
+else
+  warn "npm not found — skipped chrome-devtools-mcp"
 fi
 
 # ─── Git config ──────────────────────────────────────────
