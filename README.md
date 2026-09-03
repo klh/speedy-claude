@@ -1,8 +1,14 @@
 # speedy-claude
 
-Based on [agent-skills](https://github.com/addyosmani/agent-skills) — production-grade engineering skills for AI coding agents, extended with CLI speed optimizations that make file operations **10-1400x faster**.
+Make Claude Code **10–1400x faster** at file operations — and **structurally safe** at editing.
 
-Companion repo: **[klh/skills](https://github.com/klh/skills)** — personal agent skills published at `npx skills add klh/skills`.
+Based on [agent-skills](https://github.com/addyosmani/agent-skills), extended with three layers that work together:
+
+1. **Speed** — modern CLI tools + `CLAUDE.md` rules that replace sequential Read+Edit with single parallel pipelines
+2. **Safety** — enforcement hooks that block fragile shell edits and syntax-check every file after each edit
+3. **Autonomy** — evidence-based permission allowlist + `acceptEdits` so the agent works without prompting
+
+Companion repo: **[klh/skills](https://github.com/klh/skills)** — personal `klh-*` skill variants (`npx skills add klh/skills`).
 
 ```
   DEFINE          PLAN           BUILD          VERIFY         REVIEW          SHIP
@@ -13,15 +19,13 @@ Companion repo: **[klh/skills](https://github.com/klh/skills)** — personal age
   /spec          /plan          /build        /test         /review       /ship
 ```
 
-Plus CLI speed tools that replace slow sequential file operations with single parallel pipelines.
-
 ---
 
-## The Problem
+## The two problems
 
-Claude Code edits files one at a time. Each Read or Edit tool call costs ~0.5-1s of round-trip overhead. When a change affects 50 files, that's **~50 seconds** of just waiting — before Claude even thinks.
+**Speed.** Claude Code edits files one at a time. Each Read/Edit round-trip costs ~0.5–1s; a 50-file change burns ~50s before any thinking happens. Single CLI pipelines do the same work in milliseconds.
 
-The fix: single CLI commands that do the same work in milliseconds.
+**Safety.** Agents left to themselves edit via `cat >> file <<'EOF'` heredocs and inline `python3 - <<EOF` rewriters — prompt-free but context-blind, untracked, never syntax-checked. Speed without guardrails produces fast broken code. This repo now ships both.
 
 ## Benchmarks
 
@@ -31,141 +35,51 @@ Tested on a real codebase (733 TypeScript files, ~2500 total files, Apple M-seri
 |-----------|-------|---------------|-------------|---------|
 | Multi-file find & replace | 47 | Read+Edit ~95s | `rg \| sad -k` 67ms | **~1400x** |
 | Codebase-wide rename | 538 | ~538s sequential | `ambr` 490ms | **~1100x** |
+| **Structural rename (strings/comments untouched)** | 2+ | `ambr` (rewrites strings too) | `ast-grep run -p 'old($A)' -r 'new($A)' --lang ts -U` | **correct where text tools are wrong** |
 | Count pattern matches | 346 | Grep+Read+count ~5s | `rg -c \| awk` 54ms | **~90x** |
 | Find files | 733 | `find` 3573ms | `fd` 56ms | **64x** |
-| Regex replace | 346 | `sed -E` 1530ms | `sd -s` 921ms | **1.7x** |
-| Bulk rename (parallel) | 538 | `fd --threads=1` 3269ms | `fd -x` (parallel) 1109ms | **3x** |
-| JSON parsing | — | `python3 -c` 56ms | `jq` 31ms | **1.8x** |
+| Regex replace | 346 | `sed -E` 1530ms | `sd -s` 921ms | 1.7x |
+| Bulk rename (parallel) | 538 | `fd --threads=1` 3269ms | `fd -x` 1109ms | **3x** |
+| JSON parsing | — | `python3 -c` 56ms | `jq` 31ms | 1.8x |
 | File copy (NFS) | — | `cp` 6m18s | `xcp` 37s | **10x** |
 
----
+## The editing stack (fast AND safe)
 
-## Install
+| Layer | Mechanism |
+|-------|-----------|
+| Surgical edit | Claude Code **Edit** tool — unique context anchor, ambiguity fails loudly, auto-accepted (`acceptEdits`) |
+| New/whole file | **Write** tool |
+| Textual bulk replace | `sd` (regex) · `ambr`/`ambs` (parallel) · `sad` (diff preview) |
+| Structural replace | `ast-grep` — AST nodes only; strings and comments stay untouched |
+| Structured config | `jq` (JSON) · `yq` (YAML/TOML/XML) |
+| Enforcement | `hooks/edit-enforce.sh` denies `cat > f`, `cat >> f`, `sed -i`, `perl -i`; nudges heredoc rewriters toward Edit/Write |
+| Post-edit verification | `hooks/syntax-check.sh` — parse check per save: json→jq, py→ast, sh→bash -n, js→node --check, ts→project tsc; errors feed straight back to the agent |
+| Lint / dev loop | `qlty check` — 68 linters, one diff-aware command (`qlty init -y && qlty plugins enable biome prettier` on first use) |
 
-### Option 1: Clone into ~/.claude (recommended — like dotfiles)
+**Why the enforcement exists:** `cat` is auto-allowed by the harness, so shell heredoc writes were the model's prompt-dodging workaround — every one of them invisible to diffs and unchecked. Denying the pattern and making Edit/Write prompt-free removes both the failure mode *and* the incentive.
 
-```bash
-# Back up existing config if needed
-mv ~/.claude ~/.claude.bak
+## Hooks
 
-# Clone directly — skills/ and CLAUDE.md land in the right place
-git clone https://github.com/klh/speedy-claude.git ~/.claude
+| Hook | Event | Effect |
+|------|-------|--------|
+| `session-start.sh` | SessionStart | One-line pointer (skills list is already in the system prompt — no full SKILL.md injection) |
+| `tool-enforce.sh` | PreToolUse/Bash | Non-blocking nudge toward fast tools (`ls → eza`, `find → fd`, …). Low-noise: skips git subcommands, mid-pipe use, version probes |
+| `edit-enforce.sh` | PreToolUse/Bash | **Denies** shell file-writes (cat redirects, `sed -i`, `perl -i`), **nudges** interpreter-heredoc rewriters and `echo >` content generation. Exempts `/tmp`, `$TMPDIR`, `/dev/*` |
+| `syntax-check.sh` | PostToolUse/Edit\|Write | Instant parse check of the edited file; failures returned to the agent to fix immediately |
 
-# Install CLI tools
-~/.claude/install.sh
-```
+Register them via `settings.example.json` (below).
 
-### Option 2: CLI tools only (no skills)
+## Autonomy settings
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/klh/speedy-claude/main/install.sh | bash
-```
+`settings.example.json` is a ready template: GLM/z.ai (or any Anthropic-compatible) env vars, `acceptEdits`, an evidence-based allowlist (fast CLI tools + `npm test`/`dotnet test`/`git fetch`/`npx tsc --noEmit`), and deny guardrails (`sudo rm`, force-push, `rm -rf ~/*`). Copy to `~/.claude/settings.json`, fill the token, adjust to your stack.
 
-### Option 3: Install via npx skills
+## Skills — 19 active, curated
 
-```bash
-# Install all skills from this repo
-npx skills add klh/speedy-claude -g -y
+A 2026-09 audit (`skillUsage` telemetry across months of sessions) found ~half the original skill pack was never invoked — pure context cost in every session. The active set is curated; the rest are parked in [`skills-available/`](skills-available/README.md) with a restore command (`git mv skills-available/<name> skills/`). Parked skills cost zero context.
 
-# Or install the companion personal skills repo
-npx skills add klh/skills -g -y
-```
-
-## What the install script does
-
-1. Installs 30+ tools via Homebrew and Cargo
-2. Sets `delta` as your git diff pager
-3. Initializes `zoxide` for smart cd
-4. Prints a summary of what changed
-
-Skills and CLAUDE.md are included by cloning the repo into `~/.claude/` — no copying needed.
-
----
-
-## All 39 Skills
-
-### Define — Clarify what to build
-
-| Skill | What It Does |
-|-------|-------------|
-| [idea-refine](skills/idea-refine/SKILL.md) | Structured divergent/convergent thinking |
-| [spec-driven-development](skills/spec-driven-development/SKILL.md) | Write PRD before any code |
-
-### Plan — Break it down
-
-| Skill | What It Does |
-|-------|-------------|
-| [planning-and-task-breakdown](skills/planning-and-task-breakdown/SKILL.md) | Decompose specs into verifiable tasks |
-
-### Build — Write the code
-
-| Skill | What It Does |
-|-------|-------------|
-| [incremental-implementation](skills/incremental-implementation/SKILL.md) | Thin vertical slices |
-| [test-driven-development](skills/test-driven-development/SKILL.md) | Red-Green-Refactor |
-| [context-engineering](skills/context-engineering/SKILL.md) | Feed agents the right info at the right time |
-| [frontend-ui-engineering](skills/frontend-ui-engineering/SKILL.md) | Component architecture, design systems |
-| [api-and-interface-design](skills/api-and-interface-design/SKILL.md) | Contract-first API design |
-| [cli-speed-tools](skills/cli-speed-tools/SKILL.md) | Modern CLI replacements (10-1400x faster) |
-| [core-components](skills/core-components/SKILL.md) | Design system patterns |
-| [lit-dev](skills/lit-dev/SKILL.md) | Lit web components with TypeScript |
-
-### Verify — Prove it works
-
-| Skill | What It Does |
-|-------|-------------|
-| [browser-testing-with-devtools](skills/browser-testing-with-devtools/SKILL.md) | Chrome DevTools MCP testing |
-| [debugging-and-error-recovery](skills/debugging-and-error-recovery/SKILL.md) | Five-step triage |
-| [systematic-debugging](skills/systematic-debugging/SKILL.md) | Four-phase root cause analysis |
-| [find-bugs](skills/find-bugs/SKILL.md) | Bug and vulnerability detection |
-| [testing-patterns](skills/testing-patterns/SKILL.md) | Unit testing and mocking strategies |
-| [zod-validation](skills/zod-validation/SKILL.md) | Zod schema validation |
-| [zod4](skills/zod4/SKILL.md) | Zod 4 validation library |
-
-### Review — Quality gates before merge
-
-| Skill | What It Does |
-|-------|-------------|
-| [code-review-and-quality](skills/code-review-and-quality/SKILL.md) | Five-axis code review |
-| [code-simplification](skills/code-simplification/SKILL.md) | Chesterton's Fence, Rule of 500 |
-| [code-simplifier](skills/code-simplifier/SKILL.md) | Simplify and refactor code |
-| [security-and-hardening](skills/security-and-hardening/SKILL.md) | OWASP Top 10 prevention |
-| [performance-optimization](skills/performance-optimization/SKILL.md) | Measure-first performance |
-
-### Ship — Deploy with confidence
-
-| Skill | What It Does |
-|-------|-------------|
-| [git-workflow-and-versioning](skills/git-workflow-and-versioning/SKILL.md) | Trunk-based development |
-| [ci-cd-and-automation](skills/ci-cd-and-automation/SKILL.md) | Shift Left, feature flags |
-| [deprecation-and-migration](skills/deprecation-and-migration/SKILL.md) | Code-as-liability mindset |
-| [documentation-and-adrs](skills/documentation-and-adrs/SKILL.md) | Architecture Decision Records |
-| [shipping-and-launch](skills/shipping-and-launch/SKILL.md) | Pre-launch checklists |
-
-### Configure & Docs
-
-| Skill | What It Does |
-|-------|-------------|
-| [settings-audit](skills/settings-audit/SKILL.md) | Settings.json audit |
-| [project-memory](skills/project-memory/SKILL.md) | Structured project memory |
-| [find-skills](skills/find-skills/SKILL.md) | Discover agent skills |
-| [skill-lookup](skills/skill-lookup/SKILL.md) | Search skill registries |
-| [agents-md](skills/agents-md/SKILL.md) | Create AGENTS.md files |
-| [code-documenter](skills/code-documenter/SKILL.md) | Generate documentation |
-| [openapi-directory-first](skills/openapi-directory-first/SKILL.md) | API documentation lookup |
-| [supabase-postgres-best-practices](skills/supabase-postgres-best-practices/SKILL.md) | Postgres optimization |
-
-### Meta
-
-| Skill | What It Does |
-|-------|-------------|
-| [using-agent-skills](skills/using-agent-skills/SKILL.md) | How to use this skills pack |
-
----
+Highlights: `cli-speed-tools` · `code-simplifier` · `find-bugs` · `lit-dev` · `core-components` · `zod4` · `test-driven-development` · `systematic-debugging` · `openapi-directory-first` · `browser-testing-with-devtools` · `settings-audit` · `project-memory` — full table in CLAUDE.md's *Skills Quick Reference*.
 
 ## Slash Commands
-
-7 commands that map to the development lifecycle:
 
 | What you're doing | Command | Key principle |
 |-------------------|---------|---------------|
@@ -174,14 +88,9 @@ Skills and CLAUDE.md are included by cloning the repo into `~/.claude/` — no c
 | Build incrementally | `/build` | One slice at a time |
 | Prove it works | `/test` | Tests are proof |
 | Review before merge | `/review` | Improve code health |
-| Simplify the code | `/code-simplify` | Clarity over cleverness |
 | Ship to production | `/ship` | Faster is safer |
 
----
-
 ## Agent Personas
-
-Pre-configured specialist personas for targeted reviews:
 
 | Agent | Role | Perspective |
 |-------|------|-------------|
@@ -189,70 +98,60 @@ Pre-configured specialist personas for targeted reviews:
 | [test-engineer](agents/test-engineer.md) | QA Specialist | Test strategy, coverage analysis |
 | [security-auditor](agents/security-auditor.md) | Security Engineer | Vulnerability detection, OWASP |
 
----
+## Code style this repo encodes
 
-## How CLI Speed Tools Work
+Modular and DRY *within sanity*. Event mediator/composition over inheritance. Close to the metal over abstraction — Lit/web components over React-class frameworks, platform APIs over wrappers. Boring, inspectable code. (Full section in CLAUDE.md.)
 
-The `cli-speed-tools` skill teaches agents to:
+## Multi-agent workflows
 
-1. **Never Read+Edit in a loop** — use `ambr`/`sd`/`sad` pipelines for multi-file changes
-2. **Search with context** — use `batgrep` instead of `rg` + separate Read calls
-3. **Use structural diffs** — use `difft` instead of raw `git diff`
-4. **Run linters first** — use `shellcheck`/`actionlint` before manual review
-5. **Use parallel execution** — `fd -x` and `ambr` run in parallel by default
-6. **Use single-command patterns** — `rg -c | awk` replaces Grep+Read+count
+Say **`ultracode <task>`** or "use a workflow" in Claude Code to fan out an orchestrated multi-agent run — parallel review dimensions with adversarial verify passes, bulk migrations, research fan-outs. Default size medium (~≤15 agents). Works on GLM/z.ai setups; subagents inherit session model config.
 
----
+## MCP recommendations
 
-## Tool-First Enforcement (optional)
-
-The skill + `CLAUDE.md` rules are *soft* guidance. For a non-blocking hard
-guardrail, this repo ships `hooks/tool-enforce.sh` — a `PreToolUse` advisory
-that nudges Claude toward the fast tool whenever it standalone-invokes a native
-binary (`ls -> eza`, `find -> fd`, `grep -> rg`, `cat -> bat`, `sed -> sd`,
-`du -> dust`, `diff -> difft`, `ps -> procs`, `curl -> xh`). It never blocks
-(exit 0) and stays low-noise: it skips `git` subcommands, mid-pipe use,
-`--version`/`--help` probes, and non-Bash tools.
-
-Enable it by appending (idempotently) to your `PreToolUse` hooks, and add a
-`permissions.allow` entry for the fast tools so they don't prompt on first use
-(an allowlist removes the friction that otherwise biases toward native tools):
+| Need | Server |
+|------|--------|
+| Browser testing / DOM / network | `chrome-devtools-mcp` |
+| Current library docs | `context7` (`https://mcp.context7.com/mcp`) |
 
 ```bash
-HOOK="bash $HOME/.claude/hooks/tool-enforce.sh"
-jq --arg h "$HOOK" \
-  'if (.hooks.PreToolUse // [] | map(.hooks[]?.command) | any(test("tool-enforce.sh"))) then .
-   else .hooks.PreToolUse += [{"hooks":[{"type":"command","command":$h}]}] end' \
-  ~/.claude/settings.json > ~/.claude/settings.json.new \
-  && mv ~/.claude/settings.json.new ~/.claude/settings.json
+npm i -g chrome-devtools-mcp
+claude mcp add -s user chrome-devtools -- chrome-devtools-mcp
+claude mcp add -s user -t http context7 https://mcp.context7.com/mcp
 ```
 
-Re-verify any time with `bash ~/.claude/hooks/verify-tools.sh`.
+## Install
 
----
+### Option 1: Clone into ~/.claude (recommended — like dotfiles)
 
-## Project Structure
-
-```
-speedy-claude/
-├── skills/                    # 39 skills (SKILL.md per directory)
-├── agents/                    # 3 specialist personas
-├── hooks/                     # Session lifecycle hooks
-├── .claude/commands/          # 7 slash commands
-├── references/                # 4 supplementary checklists
-├── docs/                      # Setup guides per tool
-├── install.sh                 # CLI speed tools installer
-├── CLAUDE.md                  # Project config
-└── AGENTS.md                  # Agent conventions
+```bash
+mv ~/.claude ~/.claude.bak
+git clone https://github.com/klh/speedy-claude.git ~/.claude
+~/.claude/install.sh
+cp ~/.claude/settings.example.json ~/.claude/settings.json  # then edit token/allowlist
 ```
 
----
+### Option 2: CLI tools only (no skills)
 
-## Credits
+```bash
+curl -fsSL https://raw.githubusercontent.com/klh/speedy-claude/main/install.sh | bash
+```
 
-- **[agent-skills](https://github.com/addyosmani/agent-skills)** by Addy Osmani — 20 production-grade engineering skills
-- **[klh/skills](https://github.com/klh/skills)** — 13 personal agent skills, published via `npx skills add klh/skills`
-- Custom skills and CLI speed tools by [Klaus L. Hougesen](https://github.com/klh)
+### Option 3: Skills via npx
+
+```bash
+npx skills add klh/speedy-claude -g -y   # or the companion: npx skills add klh/skills -g -y
+```
+
+`install.sh` installs 35+ tools (brew/cargo + the qlty release binary), sets `delta` as git pager, and initializes `zoxide`. It does **not** touch your `settings.json` — copy `settings.example.json` yourself.
+
+## The full dev loop
+
+```
+implement  →  tests (npm test / dotnet test)  →  qlty check (diff-aware lint)  →  difft review
+     ↑____________________ syntax-check.sh guards every edit ____________________↑
+```
+
+The agent participates in the whole loop, not just generation — verified by tooling before anything is claimed done.
 
 ## License
 

@@ -1,5 +1,49 @@
 # Global Rules
 
+## Operating Style (applies to every response)
+
+- Think before acting; read existing files before writing code. No redundant re-reads.
+- Act autonomously on reversible steps; ask only before publishing, deleting, or other irreversible/outward-facing actions.
+- One focused implementation pass — avoid write-delete-rewrite cycles.
+- Verify with real command output before claiming anything works. Evidence before assertions.
+- Concise output, thorough reasoning. No sycophancy, no filler. If unsure, say so; never invent file paths.
+- Parked skills live in `~/.claude/skills-available/` (see its README to restore).
+
+## File Editing Rules (enforced by hooks)
+
+- **Never create or modify files via shell.** No `cat > f <<'EOF'`, `cat >> f`, `echo/printf > f`, `sed -i`, `perl -i`, or inline `python3 - <<EOF` rewriters. `edit-enforce.sh` denies these; they bypass context anchoring, diffing, and syntax checks.
+- Use **Edit** for surgical changes (requires a unique context anchor — ambiguity fails loudly instead of corrupting) and **Write** for new/whole files. Both are prompt-free under `acceptEdits` and syntax-checked on save by `syntax-check.sh` (json/py/sh/js + project-local tsc for .ts).
+- Bulk mechanical replaces: `sd` / `ambr` (fast, blessed). Identifier/structure-shaped changes: `ast-grep`. Semantic multi-file changes: Edit per file.
+- Capturing **command output** to a file (`xh ... > resp.json`) is fine; generating file *content* through the shell is not.
+- After any structural edit, fix syntax errors reported by the PostToolUse check before moving on.
+
+## Structural Editing & Linting
+
+| Job | Tool | Pattern |
+|-----|------|---------|
+| AST-aware find/replace (won't touch strings/comments) | `ast-grep` | `ast-grep run -p 'oldCall($A)' -r 'newCall($A)' --lang ts` (dry-run by default, `-U` applies; `sg` alias) |
+| Goto linter — full dev loop checks | `qlty` | `qlty check` (diff-aware: branch changes only) · `qlty check --all` · `qlty fmt` · first time in a repo: `qlty init -y && qlty plugins enable biome prettier` |
+| YAML/TOML/XML structured edits | `yq` | `yq -i '.a.b = "x"' file.yaml` (like jq, for config) |
+| Fast JS/TS lint+format inside configured projects | `biome` | project-level tool; qlty orchestrates it otherwise |
+
+Textual bulk replaces stay with `sd`/`ambr`; `ast-grep` for anything identifier/structure-shaped.
+
+## Multi-agent Workflows
+
+- Say **`ultracode <task>`** or **"use a workflow"** to fan out an orchestrated multi-agent run (deterministic script coordinating many subagents: parallel review dimensions, verify passes, bulk migrations, research fan-outs).
+- Default workflow size: medium (~≤15 agents). Results return as a single aggregated report.
+
+## MCP Tool Selection
+
+| Need | Use |
+|------|-----|
+| Browser testing / DOM / console / network | `chrome-devtools` MCP (`npm i -g chrome-devtools-mcp` → `claude mcp add`) |
+| Current library/API docs (avoid stale training data) | `context7` MCP (`claude mcp add -t http context7 https://mcp.context7.com/mcp`) |
+| Screenshot OCR, image/diagram/chart analysis | vision MCP of your provider |
+| GitHub repo reading | `gh` CLI first |
+| Web search / page fetch | built-in WebSearch/WebFetch |
+| Jira / Confluence | `atlassian` plugin |
+
 ## CLI Speed Tools (always use)
 
 ### Filesystem
@@ -214,6 +258,21 @@ RIGHT: dust                                                  (instant treemap)
 RIGHT: fd --type f --size +100m                             (find large files)
 ```
 
+### Rule 8: Structural edits beat textual for identifier-shaped changes
+When renaming functions/args or reshaping calls, `ast-grep` matches AST nodes — string literals and comments stay untouched.
+
+```
+WRONG: ambr 'getForeignKeys' 'foreignKeysFor'            (also rewrites strings & comments)
+RIGHT: ast-grep run -p 'getForeignKeys($ID)' -r 'foreignKeysFor($ID)' --lang ts -U
+```
+
+### Rule 9: Full dev loop — verify before claiming done
+After implementing: run tests → `qlty check` (diff-aware) → `difft` review of the change. Never report success on unverified code; PostToolUse syntax checks must be clean first.
+
+```
+RIGHT: npm test && qlty check && difft main...HEAD
+```
+
 ## Complete Tool Inventory
 
 ### Installed & Ready
@@ -228,6 +287,10 @@ RIGHT: fd --type f --size +100m                             (find large files)
 | **Find/replace** | `sd` | `sed` |
 | **Bulk replace** | `ambr`/`ambs` (amber) | `find \| xargs sed` |
 | **Preview replace** | `sad` | `sed` + manual diff |
+| **Structural replace** | `ast-grep` (`sg`) | regex renames that must ignore strings & comments |
+| **Universal linter** | `qlty` | 68 linters, one diff-aware command |
+| **JS/TS lint+fmt** | `biome` | eslint+prettier in one Rust binary |
+| **YAML/TOML/XML** | `yq` | `jq` for config files |
 | **File copy** | `xcp` | `cp` (10x faster on NFS) |
 | **Structural diff** | `difft` (difftastic) | `diff` |
 | **Syntax diff** | `batdiff`, `delta` | `git diff` |
@@ -278,27 +341,34 @@ RIGHT: fd --type f --size +100m                             (find large files)
 | **Binary analysis** | `radare2` | — |
 | **GNU coreutils** | 186 `g*` tools | BSD equivalents |
 
+
+## Code Style Preferences
+
+- **Modular, DRY** — within sanity, not extremist. Extract a shared helper on the second duplicate, not the first; stop abstracting when it hurts readability.
+- **Event mediator / composition over inheritance.** Prefer emitting/subscribing to events (Lit events, EventTarget, pub-sub) over base-class extension chains.
+- **Close to the metal over abstraction.** Lit / native web components over React-class frameworks; platform APIs over wrappers; fewer layers between code and the runtime.
+- Prefer boring, inspectable code. One obvious way through a module; explicit data flow; no magic.
+
 ## Available Skills Quick Reference
 
-**Always check this list before starting any task. Invoke the relevant skill FIRST.**
+19 active skills (optional ones parked in `skills-available/`). Check this list when a task matches; invoke the skill before starting.
 
-### Filesystem & Code Intelligence
+### Editing & Code Intelligence
 
 | Skill | When to use |
 |-------|-------------|
 | `cli-speed-tools` | ANY terminal file operation — listing, searching, reading files |
-| `openapi-directory-first` | Working with ANY public API — check openapi-directory before training data or web search |
 | `code-simplifier` | Simplifying, refactoring, or cleaning up existing code |
 | `find-bugs` | Reviewing changes for bugs, security vulnerabilities, code quality |
-| `simplify` | Review changed code for reuse, quality, and efficiency after edits |
+| `openapi-directory-first` | Working with ANY public API — check openapi-directory before training data or web search |
 
 ### Frontend & UI
 
 | Skill | When to use |
 |-------|-------------|
-| `frontend-design` | Creating production-grade frontend interfaces |
 | `core-components` | Building UI, using design tokens, or working with the component library |
 | `lit-dev` | Creating Lit web components with TypeScript |
+| `browser-testing-with-devtools` | Browser testing, DOM/console/network inspection via Chrome DevTools MCP |
 
 ### Validation & Testing
 
@@ -306,74 +376,23 @@ RIGHT: fd --type f --size +100m                             (find large files)
 |-------|-------------|
 | `zod-validation` | Validating API inputs and data with Zod schemas |
 | `zod4` | Using Zod 4 schema validation library |
-| `testing-patterns` | Writing unit tests, mocking strategies, TDD workflow |
-| `superpowers:test-driven-development` | Before implementing ANY feature or bugfix |
+| `test-driven-development` | Before implementing ANY feature or bugfix |
 
-### Debugging & Problem Solving
-
-| Skill | When to use |
-|-------|-------------|
-| `systematic-debugging` / `superpowers:systematic-debugging` | Bugs, test failures, unexpected behavior — four-phase root cause analysis |
-| `superpowers:dispatching-parallel-agents` | Facing 2+ independent tasks that can run in parallel |
-
-### Planning & Architecture
+### Debugging & Planning
 
 | Skill | When to use |
 |-------|-------------|
-| `superpowers:brainstorming` | BEFORE any creative work — features, building, designing |
-| `superpowers:writing-plans` | Have a spec/requirements for a multi-step task |
-| `superpowers:executing-plans` | Have a written plan to execute in a worktree |
-| `superpowers:subagent-driven-development` | Executing plans with independent tasks in parallel |
+| `systematic-debugging` | Bugs, test failures, unexpected behavior — root cause before any fix |
+| `spec-driven-development` | Starting a new project/feature with no specification |
+| `context-engineering` | Setting up or repairing agent context/rules files for a project |
 
-### Git & Workflow
-
-| Skill | When to use |
-|-------|-------------|
-| `commit-commands:commit` | Create a git commit |
-| `commit-commands:commit-push-pr` | Commit, push, and open a PR |
-| `commit-commands:clean_gone` | Clean up git branches marked as [gone] |
-| `superpowers:using-git-worktrees` | Starting feature work that needs isolation |
-| `superpowers:finishing-a-development-branch` | Implementation complete, tests pass, ready to finish |
-
-### Code Review & Quality
+### Docs & Setup
 
 | Skill | When to use |
 |-------|-------------|
-| `superpowers:requesting-code-review` | Completed tasks, implemented features, before merging |
-| `superpowers:receiving-code-review` | Received code review feedback, before implementing |
-| `superpowers:verification-before-completion` | About to claim work is complete/fixed/passing |
-
-### Memory & Documentation
-
-| Skill | When to use |
-|-------|-------------|
-| `episodic-memory:search-conversations` | Search previous conversations for context |
-| `episodic-memory:remembering-conversations` | "How should I..." or "what's the best approach..." questions |
-| `project-memory` | Setting up structured project memory |
-| `agents-md` | Creating or updating AGENTS.md files |
-| `claude-md-management:revise-claude-md` | Update CLAUDE.md with session learnings |
-| `claude-md-management:claude-md-improver` | Audit and improve CLAUDE.md files |
-| `code-documenter` | Generating technical documentation |
-
-### Config & Setup
-
-| Skill | When to use |
-|-------|-------------|
-| `update-config` | Modifying settings.json (hooks, permissions, env vars) |
-| `settings-audit` | Setting up new project, auditing existing settings |
-| `superpowers:writing-skills` | Creating or editing skills |
-| `skill-lookup` | Search and install skills from prompts.chat registry |
+| `agents-md` | Creating/maintaining AGENTS.md / CLAUDE.md agent docs |
+| `project-memory` | Setting up structured project memory in docs/project_notes/ |
+| `settings-audit` | Auditing/generating a project's Claude Code settings.json permissions |
+| `skill-lookup` | Search and install skills from the prompts.chat registry |
 | `find-skills` | Discover and install agent skills |
-
-### Specialized Tools
-
-| Skill | When to use |
-|-------|-------------|
-| `playwright-skill` | Browser automation, testing, web interaction |
-| `context7` | Fetching current library/framework documentation |
-| `supabase-postgres-best-practices` | Postgres queries, schema design, performance |
-| `claude-api` | Building with Claude API / Anthropic SDK / Agent SDK |
-| `loop` | Running recurring tasks on an interval |
-| `superpowers-lab:finding-duplicate-functions` | Auditing codebase for semantic duplication |
-| `superpowers-lab:mcp-cli` | Using MCP servers on-demand via CLI |
-| `superpowers-lab:using-tmux-for-interactive-commands` | Running interactive CLI tools (vim, git rebase -i) |
+| `git-workflow-and-versioning` | Committing, branching, organizing parallel work streams |

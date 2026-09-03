@@ -75,6 +75,11 @@ BREW_TOOLS=(
   tldr            # simplified man pages
   serve           # instant static file server
   mkcert          # local TLS certificates
+
+  # Structural editing & quality (2026-09)
+  ast-grep        # AST-aware find/replace — won't touch strings/comments
+  biome           # fast JS/TS lint+format inside configured projects
+  yq              # jq for YAML/TOML/XML
 )
 
 info "Installing ${#BREW_TOOLS[@]} brew packages..."
@@ -104,6 +109,35 @@ for tool_spec in "${CARGO_TOOLS[@]}"; do
     cargo install "$tool" 2>/dev/null || warn "Failed to install $tool via cargo"
   fi
 done
+
+# ─── qlty (goto linter — no brew formula, install release binary) ──
+
+if command -v qlty >/dev/null 2>&1; then
+  echo "  ✓ qlty $(qlty --version 2>/dev/null | head -1 | cut -d' ' -f2) (already installed)"
+else
+  QLTY_BIN_DIR="$HOME/.local/bin"
+  mkdir -p "$QLTY_BIN_DIR"
+  case "$(uname -m)" in
+    arm64)  QLTY_ASSET="qlty-aarch64-apple-darwin.tar.xz" ;;
+    x86_64) QLTY_ASSET="qlty-x86_64-apple-darwin.tar.xz" ;;
+    *)      QLTY_ASSET="" ;;
+  esac
+  if [ -n "$QLTY_ASSET" ] && [ "$(uname -s)" = "Darwin" ]; then
+    echo "  → qlty (from github.com/qltysh/qlty releases)..."
+    QLTY_TMP="$(mktemp -d)"
+    if curl -fsSL "https://github.com/qltysh/qlty/releases/latest/download/$QLTY_ASSET" -o "$QLTY_TMP/qlty.tar.xz" \
+       && tar -xJf "$QLTY_TMP/qlty.tar.xz" -C "$QLTY_TMP" \
+       && find "$QLTY_TMP" -name qlty -type f -exec /bin/cp -f {} "$QLTY_BIN_DIR/qlty" \; \
+       && chmod +x "$QLTY_BIN_DIR/qlty"; then
+      info "Installed qlty to $QLTY_BIN_DIR/qlty"
+    else
+      warn "qlty install failed — get it from https://github.com/qltysh/qlty/releases"
+    fi
+    rm -rf "$QLTY_TMP"
+  else
+    warn "Unsupported platform for qlty auto-install — see https://github.com/qltysh/qlty/releases"
+  fi
+fi
 
 # ─── Git config ──────────────────────────────────────────
 
@@ -142,19 +176,22 @@ echo -e "${BOLD}${GREEN}  speedy-claude installed!${RESET}"
 echo -e "${BOLD}══════════════════════════════════════════════════${RESET}"
 echo ""
 echo "  What changed:"
-echo "    • 30+ CLI tools installed via brew/cargo"
+echo "    • 35+ CLI tools installed via brew/cargo (+qlty release binary)"
 echo "    • delta set as git diff pager"
 echo "    • zoxide initialized in shell"
 echo ""
 echo "  Next steps:"
 echo "    1. Restart your shell (or source $SHELL_RC)"
-echo "    2. Start a new Claude Code session"
-echo "    3. Ask Claude to rename something across the codebase"
-echo "       — it will now use ambr/sd/sad instead of Read+Edit loops"
+echo "    2. Register the hooks + permissions in ~/.claude/settings.json —"
+echo "       copy settings.example.json as a starting point (see README)"
+echo "    3. Start a new Claude Code session"
+echo "    4. Ask Claude to rename something across the codebase"
+echo "       — it will now use ast-grep/ambr/sd instead of Read+Edit loops,"
+echo "       and every Edit/Write gets syntax-checked automatically"
 echo ""
 echo "  Skills & CLAUDE.md:"
 echo "    If you cloned into ~/.claude/, skills and config are already in place."
-echo "    Otherwise, see README.md for setup options."
+echo "    Optional skills are parked in skills-available/ (zero context cost)."
 echo ""
-echo "  Verify: fd --version && rg --version | head -1 && delta --version"
+echo "  Verify: fd --version && rg --version | head -1 && ast-grep --version && qlty --version"
 echo ""

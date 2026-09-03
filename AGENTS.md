@@ -6,6 +6,8 @@ This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, A
 
 A collection of skills for Claude.ai and Claude Code for senior software engineers. Skills are packaged instructions and scripts that extend Claude and your coding agents capabilities.
 
+**Skill curation:** `skills/` holds the actively-maintained set (19). Skills that fell out of use live in `skills-available/` and are NOT auto-loaded — restore with `git mv skills-available/<name> skills/`. New skills go in `skills/` only if they'll be used; otherwise `skills-available/`.
+
 ## Creating a New Skill
 
 ### Directory Structure

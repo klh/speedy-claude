@@ -1,0 +1,106 @@
+{
+  "_comment": "speedy-claude settings template — copy to ~/.claude/settings.json and fill in the env vars. Adjust the allowlist to your stack; entries are evidence-based from session transcripts.",
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "<your-token-here>",
+    "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+    "API_TIMEOUT_MS": "3000000",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-5.2[1m]",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-5.3-flash[1m]",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-5.3[1m]"
+  },
+  "model": "opus[1m]",
+  "effortLevel": "xhigh",
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(act:*)",
+      "Bash(actionlint:*)",
+      "Bash(ambr:*)",
+      "Bash(ambs:*)",
+      "Bash(aria2c:*)",
+      "Bash(ast-grep:*)",
+      "Bash(bat:*)",
+      "Bash(batdiff:*)",
+      "Bash(batgrep:*)",
+      "Bash(batwatch:*)",
+      "Bash(biome:*)",
+      "Bash(broot:*)",
+      "Bash(btm:*)",
+      "Bash(delta:*)",
+      "Bash(difft:*)",
+      "Bash(diskus:*)",
+      "Bash(doggo:*)",
+      "Bash(dust:*)",
+      "Bash(eza:*)",
+      "Bash(fd:*)",
+      "Bash(fswatch:*)",
+      "Bash(gh:*)",
+      "Bash(git-standup:*)",
+      "Bash(hurl:*)",
+      "Bash(hyperfine:*)",
+      "Bash(jq:*)",
+      "Bash(lazygit:*)",
+      "Bash(mkcert:*)",
+      "Bash(procs:*)",
+      "Bash(qlty:*)",
+      "Bash(rg:*)",
+      "Bash(sad:*)",
+      "Bash(sd:*)",
+      "Bash(sg:*)",
+      "Bash(serve:*)",
+      "Bash(shellcheck:*)",
+      "Bash(tokei:*)",
+      "Bash(tree:*)",
+      "Bash(watchexec:*)",
+      "Bash(xcp:*)",
+      "Bash(xh:*)",
+      "Bash(yq:*)",
+      "Bash(zoxide:*)",
+      "Bash(npm test)",
+      "Bash(npm test:*)",
+      "Bash(dotnet test)",
+      "Bash(dotnet test:*)",
+      "Bash(git fetch:*)",
+      "Bash(npx tsc --noEmit:*)",
+      "Bash(az account show:*)"
+    ],
+    "deny": [
+      "Bash(sudo rm:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(rm -rf ~/*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash $HOME/.claude/hooks/session-start.sh" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash $HOME/.claude/hooks/edit-enforce.sh" }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash $HOME/.claude/hooks/tool-enforce.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          { "type": "command", "command": "bash $HOME/.claude/hooks/syntax-check.sh" }
+        ]
+      }
+    ]
+  }
+}
