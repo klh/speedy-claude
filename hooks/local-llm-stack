@@ -1,0 +1,31 @@
+#!/bin/bash
+# local-llm-stack — keeps the LOCAL LLM stack resident (run by launchd,
+# com.klh.local-llm, KeepAlive). Starts MLX (Metal) then the Anthropic shim,
+# restarts either if it dies. Menial-task inference: claude-fast + direct
+# http://localhost:4000/v1/messages calls.
+set -uo pipefail
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+
+MLX_MODEL="mlx-community/Qwen3-4B-4bit"
+MLX_PORT=8901
+SHIM_PORT=4000
+
+cleanup() {
+  kill $(jobs -p) 2>/dev/null
+  exit 0
+}
+trap cleanup TERM INT
+
+while :; do
+  # MLX backend
+  if ! curl -s -o /dev/null --max-time 1 "http://localhost:${MLX_PORT}/v1/models"; then
+    echo "$(date -Iseconds) starting mlx_lm.server (:${MLX_PORT}, ${MLX_MODEL})"
+    mlx_lm.server --port "${MLX_PORT}" --model "${MLX_MODEL}" &
+  fi
+  # Anthropic shim
+  if ! curl -s -o /dev/null --max-time 1 "http://localhost:${SHIM_PORT}/health/liveliness"; then
+    echo "$(date -Iseconds) starting anthropic-shim (:${SHIM_PORT})"
+    bun "$HOME/.claude/local-llm/anthropic-shim.ts" &
+  fi
+  sleep 30
+done
