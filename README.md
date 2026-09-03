@@ -172,6 +172,7 @@ Headless `claude -p` performance + tool-stack audits at 06:43 daily, findings la
 ```bash
 cp ~/.claude/hooks/daily-insights.sh ~/.claude/hooks/            # already there via clone
 cp ~/.claude/hooks/launchd/com.klh.claude-insights.plist ~/Library/LaunchAgents/
+sed "s|__HOME__|$HOME|g" ~/.claude/hooks/launchd/com.klh.claude-insights.plist > ~/Library/LaunchAgents/com.klh.claude-insights.plist
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.klh.claude-insights.plist
 ```
 

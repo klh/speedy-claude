@@ -24,7 +24,7 @@ run_analyst() {
   claude -p "$1
 
 $UNTRUSTED" --model haiku \
-    --allowedTools "Write(/Users/kk/.claude-insights/**)" "Edit(/Users/kk/.claude-insights/**)" \
+    --allowedTools "Write($HOME/.claude-insights/**)" "Edit($HOME/.claude-insights/**)" \
     --disallowedTools "Bash" "WebFetch" "WebSearch" "mcp__*" 2>/dev/null
 }
 
@@ -32,7 +32,7 @@ run_auditor() {
   claude -p "$1
 
 $UNTRUSTED" --model haiku \
-    --allowedTools "Write(/Users/kk/.claude-insights/**)" "Edit(/Users/kk/.claude-insights/**)" "WebSearch" "WebFetch" \
+    --allowedTools "Write($HOME/.claude-insights/**)" "Edit($HOME/.claude-insights/**)" "WebSearch" "WebFetch" \
     --disallowedTools "Bash" "mcp__*" 2>/dev/null
 }
 
@@ -50,24 +50,24 @@ phase() { # name, fn, prompt
 
 echo "=== $(date -Iseconds) daily-insights run start"
 
-phase "performance analyst" run_analyst "You are running as the llm-performance-analyst persona. FIRST read /Users/kk/.claude/agents/llm-performance-analyst.md and follow its methodology exactly.
+phase "performance analyst" run_analyst "You are running as the llm-performance-analyst persona. FIRST read $HOME/.claude/agents/llm-performance-analyst.md and follow its methodology exactly.
 
-Scope: sessions from the last 24h: fd -e jsonl . /Users/kk/.claude/projects --changed-within 24h
+Scope: sessions from the last 24h: fd -e jsonl . $HOME/.claude/projects --changed-within 24h
 NEVER read a .jsonl whole — use jq/head/tail slices and per-file sampling; hard cap your report at 60 lines. Note: your Bash tool is disabled this run — work from what Read/jq-less inspection of file sizes and the persona file allow; if numeric metrics are impossible without Bash, deliver the qualitative error-pattern analysis and say so.
 
 Outputs:
-1. /Users/kk/.claude-insights/${TODAY}.md — full report (persona output format)
-2. Append ONLY new actionable prescriptions (one line each: [pattern] -> [fix]) to /Users/kk/.claude-insights/PENDING.md under a '## ${TODAY} performance' header"
+1. $HOME/.claude-insights/${TODAY}.md — full report (persona output format)
+2. Append ONLY new actionable prescriptions (one line each: [pattern] -> [fix]) to $HOME/.claude-insights/PENDING.md under a '## ${TODAY} performance' header"
 
-phase "tool-stack auditor" run_auditor "You are running as the tool-stack-auditor persona. FIRST read /Users/kk/.claude/agents/tool-stack-auditor.md and follow its methodology exactly.
+phase "tool-stack auditor" run_auditor "You are running as the tool-stack-auditor persona. FIRST read $HOME/.claude/agents/tool-stack-auditor.md and follow its methodology exactly.
 
-Scope: last 7 days: fd -e jsonl . /Users/kk/.claude/projects --changed-within 7d — plus /Users/kk/.claude-insights/*.md reports. NEVER read a .jsonl whole — jq/head/tail slices; report hard cap 60 lines. Bash is disabled: transcribe paths/commands you need quoted and verify prices via WebSearch/WebFetch instead of shell pipelines.
+Scope: last 7 days: fd -e jsonl . $HOME/.claude/projects --changed-within 7d — plus $HOME/.claude-insights/*.md reports. NEVER read a .jsonl whole — jq/head/tail slices; report hard cap 60 lines. Bash is disabled: transcribe paths/commands you need quoted and verify prices via WebSearch/WebFetch instead of shell pipelines.
 
 Also: vendored-spec drift check per the persona (dinero-regnskab references/openapi.json vs https://api.dinero.dk/openapi/v1/swagger.json — WebFetch the canonical URL and compare endpoint count).
 
 Outputs:
-1. /Users/kk/.claude-insights/${TODAY}-toolstack.md
-2. Append new actionable swaps to /Users/kk/.claude-insights/PENDING.md under '## ${TODAY} toolstack'"
+1. $HOME/.claude-insights/${TODAY}-toolstack.md
+2. Append new actionable swaps to $HOME/.claude-insights/PENDING.md under '## ${TODAY} toolstack'"
 
 # --- artifact health check: the run only counts if files landed ---
 FAIL=0
