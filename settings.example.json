@@ -95,6 +95,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash $HOME/.claude/hooks/skill-install-gate.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
             "command": "bash $HOME/.claude/hooks/tool-enforce.sh"
           }
         ]

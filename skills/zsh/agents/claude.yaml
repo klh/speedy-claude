@@ -1,0 +1,4 @@
+interface:
+  display_name: "Zsh"
+  short_description: "Practical Zsh workflows and configuration"
+  default_prompt: "Use $zsh to solve a Zsh task with local help first and zsh.sourceforge.io as fallback."

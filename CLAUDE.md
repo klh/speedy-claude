@@ -8,6 +8,7 @@
 - Verify with real command output before claiming anything works. Evidence before assertions.
 - Concise output, thorough reasoning. No sycophancy, no filler. If unsure, say so; never invent file paths.
 - Parked skills live in `~/.claude/skills-available/` (see its README to restore).
+- Third-party skills/plugins/MCP servers are prompt+code injectors: ALWAYS run the `skill-security-review` skill on the exact source ref before installing — the install gate denies unmarked installs; append `--security-reviewed` only after a PASS verdict.
 
 ## File Editing Rules (enforced by hooks)
 
