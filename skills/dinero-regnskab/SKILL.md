@@ -12,6 +12,34 @@ description: Automatiser Visma Dinero-bogføring via browser (Playwright/CDP) �
 3. Bruger logger selv ind (Google/Visma + MitID) → bekræft med `chromium.connectOverCDP('http://localhost:9222')` og find siden `app.dinero.dk/{orgId}/...`
 4. Alt API-kald sker via `page.evaluate(fetch('/api/...', {credentials:'include'}))` — cookie-auth følger browseren
 
+## Officiel public API — komplet OpenAPI-spec (148 endpoints)
+
+Den fulde, officielle API-flade ligger i **`references/openapi.json`** (Dinero API v1, hentet 2026-09-03 fra `https://api.dinero.dk/openapi/v1/swagger.json` — browservisning: `https://api.dinero.dk/openapi/index.html`, Postman: `https://api.dinero.dk/docs/postman`).
+
+- **Auth: Visma Connect OAuth 2.0** (Client ID/Secret + org + scopes `read/write/offline`) — ANDEN auth-vej end browser-cookies ovenfor; public API kræver egen nøgle
+- Endpoint-grupper (ca.): invoices 21 · vouchers 12 · sales 12 · integrations 10 · vouchertemplates 7 · tradeoffers 7 · ledgeritems 5 · contacts 5 · webhooks 4 · purchase-vouchers 4 · attachments 4 · state-of-account 3 · files 3 · accounts 3 · rest: organizations, vat, settings, products, sms, electronic-invoice, accounting-years m.fl.
+- Læg mærke til versionerede stier: `/v1.1/...` og `/v1.2/...` eksisterer ved siden af `/v1/...`
+
+Slå et endpoint op i spec'en (behøver ikke læses i context):
+
+```bash
+jq -r '.paths | keys[]' references/openapi.json | rg invoices          # alle stier
+jq '.paths["/v1/{organizationId}/invoices"].post.parameters' references/openapi.json
+jq '.definitions | keys' references/openapi.json | rg -i voucher       # skematyper
+```
+
+Regel: brug browser-API'et ovenfor til aktioner i en logget-ind session; brug spec'en som autoritativ reference for feltnavne, typer og den fulde flade (f.eks. webhooks/electronic-invoice som ikke findes i browseren).
+
+## Vedligehold: tjek API for ændringer
+
+**Kanonisk URL:** `https://api.dinero.dk/openapi/v1/swagger.json` (vend til `references/openapi.json`, hentet 2026-09-03). Tool-stack-auditor-tjekker den periodisk; manuel tjek:
+
+```bash
+xh get https://api.dinero.dk/openapi/v1/swagger.json --follow -d -o /tmp/dinero-spec-new.json
+difft references/openapi.json /tmp/dinero-spec-new.json        # eller: jq -S . begge | delta
+# ændret? → erstat references/openapi.json, opdater dato ovenfor, noter breaking changes her
+```
+
 ## Intern API-oversigt (org 408818 eksempel)
 
 | Handling | Endpoint |

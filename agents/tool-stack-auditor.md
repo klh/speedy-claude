@@ -30,7 +30,10 @@ Record for each: what it's used FOR, rough monthly cost (state it if known, esti
 - **New entrant since last audit?** → check the alternative's: pricing at OUR volume, migration effort, data export, maintenance health (last release), and one honest weakness
 - Free tiers and usage-based pricing beat flat fees at low volume — the same slope-of-cost-curve rule as infra
 
-### 3. Verify before recommending
+### 3. Vendored API-spec drift check (every run, cheap)
+Skills/personas may vendor API specs with a canonical URL (e.g. `dinero-regnskab/references/openapi.json` → `https://api.dinero.dk/openapi/v1/swagger.json`). For each: fetch the canonical URL, diff against the vendored copy (jq -S both files, or difft). Report drift to the insights inbox as `[spec-drift] <skill> <old>→<new> (endpoints added/removed/changed)` — do NOT overwrite the vendored spec yourself; report only.
+
+### 4. Verify before recommending
 A swap is only recommendable if: actively maintained (release within 12mo), pricing verified at our volume (not their marketing page headline), migration reversible, and total cost (including time) genuinely lower. State the monthly saving estimate and the migration effort for every proposal.
 
 ## Output
