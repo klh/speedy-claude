@@ -6,8 +6,8 @@
     <string>com.klh.local-llm</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/kk/.local/bin/mlx-swarm</string>
-        <string>start</string>
+        <string>/Users/kk/.local/bin/bun</string>
+        <string>/Users/kk/.claude/local-llm/swarm.ts</string><string>start</string>
     </array>
     <key>KeepAlive</key>
     <true/>

@@ -40,6 +40,16 @@ function routeByHeuristics(messages: any[]): string {
   return text.length < 50 ? 'extract' : 'reason';
 }
 
+const ROUTING_LOG = `${process.env.HOME}/.claude-insights/swarm-routing.log`;
+function logRouting(entry: { category: string; model: string; duration_ms: number; prompt: string; port: number }) {
+  const line = JSON.stringify({
+    ts: new Date().toISOString(),
+    ...entry,
+    prompt: entry.prompt.slice(0, 80),
+  });
+  try { Bun.appendFileSync(ROUTING_LOG, line + "\n"); } catch {}
+}
+
 const server = Bun.serve({
   port: 4000,
   async fetch(req) {
@@ -59,11 +69,15 @@ const server = Bun.serve({
     }
 
     // Route to the best specialist
+    const startTime = Date.now();
     const category = routeByHeuristics(body.messages ?? []);
     const port = PORTS[category as keyof typeof PORTS] ?? 8901;
     const model = port === 8901 ? "mlx-community/Qwen2.5-Coder-32B-Instruct-4bit"
                  : port === 8903 ? "mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit"
                  : "mlx-community/Qwen3-4B-Instruct-2507-4bit";
+    const promptText = (body.messages ?? [])
+      .map((m: any) => typeof m.content === "string" ? m.content : "")
+      .join(" ").slice(0, 80);
 
     // Build OpenAI-format request for the specialist
     const messages = (body.messages ?? []).map((m: any) => ({
@@ -100,6 +114,9 @@ const server = Bun.serve({
       if (!r.ok || !text) {
         throw new Error(j.error?.message ?? `specialist ${category} returned empty`);
       }
+
+      // Log the routing decision
+      logRouting({ category, model, duration_ms: Date.now() - startTime, prompt: promptText, port });
 
       // Return in Anthropic format
       return Response.json({

@@ -255,7 +255,7 @@ if [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
       $MLX_PYTHON -c "from huggingface_hub import snapshot_download; snapshot_download('$MODEL')" 2>/dev/null &
     done
     # Don't wait — models download in background while other setup continues
-    info "Model downloads started in background. Run 'mlx-swarm start' after they complete."
+    info "Model downloads started in background. Run 'bun ~/.claude/local-llm/swarm.ts start' after they complete."
   else
     echo "  ✓ all specialist models already cached"
   fi
@@ -315,17 +315,17 @@ echo ""
 echo "  Next steps:"
 echo "    1. Restart your shell (or source $SHELL_RC)"
 echo "    2. Copy settings.example.json to ~/.claude/settings.json and fill token"
-echo "    3. Wait for model downloads to finish, then run: mlx-swarm start"
+echo "    3. Wait for model downloads to finish, then run: bun ~/.claude/local-llm/swarm.ts start"
 echo "    4. Start a new Claude Code session"
 echo ""
 echo "  LLM Swarm (Apple Silicon):"
-echo "    mlx-swarm start     — start all specialists (3 models, ~20GB RAM)"
-echo "    mlx-swarm status    — check what's running"
+echo "    bun ~/.claude/local-llm/swarm.ts start     — start all specialists (3 models, ~20GB RAM)"
+echo "    bun ~/.claude/local-llm/swarm.ts status    — check what's running"
 echo "    claude-fast <prompt> — local inference (falls back to remote)"
 echo ""
 echo "  Daily Insights:"
 echo "    LaunchAgent runs at 06:43 — findings in ~/.claude-insights/PENDING.md"
 echo ""
 echo "  Verify: fd --version && rg --version | head -1 && ast-grep --version && qlty --version"
-echo "          mlx-swarm status"
+echo "          bun ~/.claude/local-llm/swarm.ts status"
 echo ""
