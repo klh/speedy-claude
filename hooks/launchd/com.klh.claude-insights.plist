@@ -7,7 +7,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/kk/.claude/hooks/daily-insights.sh</string>
+        <string>/Users/kk/.claude/local-llm/daily-insights.ts</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
