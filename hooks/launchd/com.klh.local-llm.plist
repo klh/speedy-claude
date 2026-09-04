@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.klh.local-llm</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/kk/.local/bin/mlx-swarm</string>
+        <string>start</string>
+    </array>
+    <key>KeepAlive</key>
+    <true/>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/kk/.claude-insights/mlx-swarm.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/kk/.claude-insights/mlx-swarm.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/kk/.local/bin:/Users/kk/.local/share/uv/tools/mlx-lm/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    <!-- Swarm: 3 specialists (~20GB) + router. 108GB free for apps + KV cache. -->
+</dict>
+</plist>

@@ -201,6 +201,102 @@ if [ -n "$SHELL_RC" ]; then
   fi
 fi
 
+# ─── LLM Specialist Swarm (MLX, Metal-native) ────────────
+
+if [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
+  info "Setting up LLM specialist swarm (Apple Silicon only)..."
+
+  # Install mlx-lm via uv (fastest Python package manager)
+  if ! command -v mlx_lm.server >/dev/null 2>&1; then
+    echo "  → installing mlx-lm via uv..."
+    if command -v uv >/dev/null 2>&1; then
+      uv tool install mlx-lm
+    else
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      export PATH="$HOME/.local/bin:$PATH"
+      uv tool install mlx-lm
+    fi
+  else
+    echo "  ✓ mlx-lm already installed"
+  fi
+
+  # Install playwright for browser automation (MJ/Dinero skills)
+  if [ -d "$HOME/.claude/mcp-servers" ] && [ ! -d "$HOME/.claude/mcp-servers/node_modules/playwright" ]; then
+    echo "  → installing playwright..."
+    (cd "$HOME/.claude/mcp-servers" && bun add playwright 2>/dev/null) || warn "playwright install failed"
+  fi
+
+  # Download the specialist models (61GB total, parallel)
+  MLX_PYTHON="$(command -v python3)"
+  if [ -x "$HOME/.local/share/uv/tools/mlx-lm/bin/python" ]; then
+    MLX_PYTHON="$HOME/.local/share/uv/tools/mlx-lm/bin/python"
+  fi
+
+  SWARM_MODELS=(
+    "mlx-community/Qwen3-4B-Instruct-2507-4bit"       # menial (non-thinking, ~100 TPS)
+    "mlx-community/Qwen3.5-9B-MLX-4bit"                # general/Danish (201 langs)
+    "mlx-community/Qwen2.5-Coder-32B-Instruct-4bit"    # code specialist
+    "mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit"  # reasoning
+    "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"      # embeddings
+    "mlx-community/Qwen3-Reranker-0.6B-4bit"           # reranking
+  )
+
+  MODELS_NEEDED=0
+  for MODEL in "${SWARM_MODELS[@]}"; do
+    DIR="$HOME/.cache/huggingface/hub/models--$MODEL"
+    if [ ! -d "$DIR" ] || [ "$(du -s "$DIR" 2>/dev/null | cut -f1)" -lt 100000 ]; then
+      MODELS_NEEDED=$((MODELS_NEEDED + 1))
+    fi
+  done
+
+  if [ "$MODELS_NEEDED" -gt 0 ]; then
+    echo "  → downloading $MODELS_NEEDED specialist models (~61GB, runs in background)..."
+    for MODEL in "${SWARM_MODELS[@]}"; do
+      $MLX_PYTHON -c "from huggingface_hub import snapshot_download; snapshot_download('$MODEL')" 2>/dev/null &
+    done
+    # Don't wait — models download in background while other setup continues
+    info "Model downloads started in background. Run 'mlx-swarm start' after they complete."
+  else
+    echo "  ✓ all specialist models already cached"
+  fi
+
+  # Copy swarm management scripts to PATH
+  for SCRIPT in mlx-swarm mlx-swarm-download claude-fast local-llm-stack approve-skill; do
+    if [ -f "$HOME/.claude/hooks/$SCRIPT" ]; then
+      chmod +x "$HOME/.claude/hooks/$SCRIPT"
+      ln -sf "$HOME/.claude/hooks/$SCRIPT" "$HOME/.local/bin/$SCRIPT" 2>/dev/null
+      echo "  ✓ $SCRIPT → ~/.local/bin/"
+    fi
+  done
+
+  # Generate HMAC secret for signed skill approvals
+  if [ ! -f "$HOME/.claude/.skill-review-secret" ]; then
+    head -c 32 /dev/urandom | xxd -p -c 32 > "$HOME/.claude/.skill-review-secret"
+    chmod 600 "$HOME/.claude/.skill-review-secret"
+    echo "  ✓ skill approval HMAC secret generated"
+  fi
+
+  # Install LaunchAgent for the swarm (auto-start on boot)
+  if [ -f "$HOME/.claude/hooks/launchd/com.klh.local-llm.plist" ]; then
+    sed "s|__HOME__|$HOME|g" "$HOME/.claude/hooks/launchd/com.klh.local-llm.plist" \
+      > "$HOME/Library/LaunchAgents/com.klh.local-llm.plist"
+    launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.klh.local-llm.plist" 2>/dev/null \
+      || warn "LaunchAgent bootstrap failed (may already be running)"
+    echo "  ✓ LaunchAgent com.klh.local-llm installed"
+  fi
+
+  # Install LaunchAgent for daily insights (headless analyst runs)
+  if [ -f "$HOME/.claude/hooks/launchd/com.klh.claude-insights.plist" ]; then
+    sed "s|__HOME__|$HOME|g" "$HOME/.claude/hooks/launchd/com.klh.claude-insights.plist" \
+      > "$HOME/Library/LaunchAgents/com.klh.claude-insights.plist"
+    launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.klh.claude-insights.plist" 2>/dev/null \
+      || warn "LaunchAgent bootstrap failed"
+    echo "  ✓ LaunchAgent com.klh.claude-insights installed (daily 06:43 analyst run)"
+  fi
+else
+  warn "Not Apple Silicon (arm64) — LLM swarm skipped"
+fi
+
 # ─── Summary ─────────────────────────────────────────────
 
 echo ""
@@ -212,19 +308,24 @@ echo "  What changed:"
 echo "    • 35+ CLI tools installed via brew/cargo (+qlty release binary)"
 echo "    • delta set as git diff pager"
 echo "    • zoxide initialized in shell"
+echo "    • LLM specialist swarm setup (if Apple Silicon)"
+echo "    • LaunchAgents for local-LLM + daily insights installed"
+echo "    • Skill approval HMAC secret generated"
 echo ""
 echo "  Next steps:"
 echo "    1. Restart your shell (or source $SHELL_RC)"
-echo "    2. Register the hooks + permissions in ~/.claude/settings.json —"
-echo "       copy settings.example.json as a starting point (see README)"
-echo "    3. Start a new Claude Code session"
-echo "    4. Ask Claude to rename something across the codebase"
-echo "       — it will now use ast-grep/ambr/sd instead of Read+Edit loops,"
-echo "       and every Edit/Write gets syntax-checked automatically"
+echo "    2. Copy settings.example.json to ~/.claude/settings.json and fill token"
+echo "    3. Wait for model downloads to finish, then run: mlx-swarm start"
+echo "    4. Start a new Claude Code session"
 echo ""
-echo "  Skills & CLAUDE.md:"
-echo "    If you cloned into ~/.claude/, skills and config are already in place."
-echo "    Optional skills are parked in skills-available/ (zero context cost)."
+echo "  LLM Swarm (Apple Silicon):"
+echo "    mlx-swarm start     — start all specialists (3 models, ~20GB RAM)"
+echo "    mlx-swarm status    — check what's running"
+echo "    claude-fast <prompt> — local inference (falls back to remote)"
+echo ""
+echo "  Daily Insights:"
+echo "    LaunchAgent runs at 06:43 — findings in ~/.claude-insights/PENDING.md"
 echo ""
 echo "  Verify: fd --version && rg --version | head -1 && ast-grep --version && qlty --version"
+echo "          mlx-swarm status"
 echo ""

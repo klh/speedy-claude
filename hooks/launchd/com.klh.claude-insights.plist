@@ -7,7 +7,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>__HOME__/.claude/hooks/daily-insights.sh</string>
+        <string>/Users/kk/.claude/hooks/daily-insights.sh</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
@@ -17,13 +17,13 @@
         <integer>43</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>__HOME__/.claude-insights/launchd-stdout.log</string>
+    <string>/Users/kk/.claude-insights/launchd-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>__HOME__/.claude-insights/launchd-stderr.log</string>
+    <string>/Users/kk/.claude-insights/launchd-stderr.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>__HOME__/.local/bin:__HOME__/.nvm/versions/node/v26.3.1/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>/Users/kk/.local/bin:/Users/kk/.nvm/versions/node/v26.3.1/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
 </dict>
 </plist>

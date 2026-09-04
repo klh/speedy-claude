@@ -49,6 +49,17 @@ Textual bulk replaces stay with `sd`/`ambr`; `ast-grep` for anything identifier/
 | Web search / page fetch | built-in WebSearch/WebFetch |
 | Jira / Confluence | `atlassian` plugin |
 
+
+## Agent CLI Interaction Lessons (from dosu.dev CLI login flow design)
+
+- **Ticket-based auth, not blocking login** — split into request + check commands; the agent process exits and resumes from a fresh process with just the ticket string. Never block the terminal while waiting for user browser interaction.
+- **JSON responses are hypermedia** — every response includes what the agent needs to continue: URL to give the user, check_command to run, expires_in, and agent_next_steps (one sentence telling an uninstructed agent what to do next).
+- **Pausing is a first-class state** — status: need_user_action with exit code 0 (not an error), plus a resume_command for the next process to pick up.
+- **Single-use tickets** — read-and-delete atomically; second exchange returns expired. Never return the same session twice.
+- **Separate sessions, not browser tokens** — reusing a browser refresh token causes rotation to sign out both sessions. Issue a dedicated CLI session instead.
+- **Test with real agent runs** — schema validation proves fields exist; only real runs prove the wording steers agents correctly. One clear sentence in agent_next_steps beats ten optional fields.
+- **API stability** — renaming a field like check_command breaks every agent reading the response. Freeze field names.
+
 ## Hybrid LLM Routing Doctrine (measured 2026-09-04, M5 Max 128GB)
 
 | Decision point                        | Route                              | Why (measured)                    |

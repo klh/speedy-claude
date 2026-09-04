@@ -1,0 +1,27 @@
+# LiteLLM proxy config — Anthropic-compatible front for local MLX models.
+# Serves /v1/messages (Anthropic shape) so `claude -p` can run fully local.
+# Backends: mlx_lm.server (Metal) on :8901. Start order:
+#   mlx_lm.server --port 8901 --model mlx-community/Qwen3-4B-4bit
+#   litellm --config ~/.claude/local-llm/litellm-config.yaml --port 4000
+model_list:
+  - model_name: glm-5.2* # maps the env's "haiku"
+    litellm_params:
+      model: openai/mlx-community/Qwen3-4B-4bit
+      api_base: http://localhost:8901/v1
+      api_key: dummy
+      use_responses_api: false
+  - model_name: glm-5.3-flash* # maps "sonnet"
+    litellm_params:
+      model: openai/mlx-community/Qwen3-4B-4bit
+      api_base: http://localhost:8901/v1
+      api_key: dummy
+      use_responses_api: false
+  - model_name: glm-5.3* # maps "opus"
+    litellm_params:
+      model: openai/mlx-community/Qwen3-4B-4bit
+      api_base: http://localhost:8901/v1
+      api_key: dummy
+      use_responses_api: false
+
+litellm_settings:
+  drop_params: true # tolerate Anthropic-only params MLX ignores
