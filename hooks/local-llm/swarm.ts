@@ -91,14 +91,12 @@ const startSpecialist = async (s: Specialist): Promise<boolean> => {
     "--prompt-cache-bytes", "4GB",
     ...(s.flags ?? []),
   ];
+  const log = `${LOG_DIR}/mlx-${s.port}.log`;
   const proc = spawn(MLX_PYTHON, args, {
     detached: true,
-    stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, PATH: `${HOME}/.local/bin:/opt/homebrew/bin:/usr/bin:/bin` },
+    stdio: ["ignore", "ignore", "ignore"],  // fully detached — redirect to log via shell
+    env: { ...process.env, PATH: `${HOME}/local/bin:/opt/homebrew/bin:/usr/bin:/bin` },
   });
-  const log = `${LOG_DIR}/mlx-${s.port}.log`;
-  proc.stdout?.on("data", (d) => appendFileSync(log, d));
-  proc.stderr?.on("data", (d) => appendFileSync(log, d));
   proc.unref();
 
   // wait for ready
@@ -115,24 +113,49 @@ const startSpecialist = async (s: Specialist): Promise<boolean> => {
 
 // ─── commands ───
 async function cmdStart(): Promise<void> {
-  console.log("🚀 Starting specialist swarm…\n");
+  console.log("🚀 Starting specialist swarm…");
+
+  // Fire-and-forget: spawn all MLX servers + router, then exit immediately.
+  // Specialists load in the background; check readiness with `swarm.ts status`.
   const resident = SPECIALISTS.filter(s => s.tier === "resident");
+
   for (const s of resident) {
-    await startSpecialist(s);
+    const alreadyUp = await isUp(s.port);
+    if (alreadyUp) {
+      console.log(`  ✓ :${s.port} ${s.label} (already running)`);
+      continue;
+    }
+    console.log(`  → :${s.port} ${s.label} (loading in background)`);
+    const log = `${LOG_DIR}/mlx-${s.port}.log`;
+    const args = [
+      MLX_PYTHON,
+      "-m", "mlx_lm.server",
+      "--port", String(s.port),
+      "--model", s.model,
+      "--prompt-cache-size", "10",
+      "--prompt-cache-bytes", "4GB",
+      ...(s.flags ?? []),
+    ];
+    // Use nohup-style detachment via shell redirect to log file
+    const shellCmd = `nohup ${args.join(" ")} >> ${log} 2>&1 &`;
+    Bun.spawn(["/bin/sh", "-c", shellCmd], { stdin: "ignore", stdout: "ignore", stderr: "ignore" });
   }
-  // router
-  if (!(await isUp(4000))) {
-    console.log("  → :4000 router-shim");
-    const proc = spawn("bun", [ROUTER], {
-      detached: true, stdio: ["ignore", "pipe", "pipe"],
-    });
-    const log = `${LOG_DIR}/mlx-router.log`;
-    proc.stdout?.on("data", (d) => appendFileSync(log, d));
-    proc.stderr?.on("data", (d) => appendFileSync(log, d));
-    proc.unref();
-    await new Promise(r => setTimeout(r, 2000));
+
+  // Router
+  const routerUp = await isUp(4000);
+  if (!routerUp) {
+    console.log("  → :4000 router-swarm (starting)");
+    const shellCmd = `nohup bun ${ROUTER} >> ${LOG_DIR}/mlx-router.log 2>&1 &`;
+    Bun.spawn(["/bin/sh", "-c", shellCmd], { stdin: "ignore", stdout: "ignore", stderr: "ignore" });
+  } else {
+    console.log("  ✓ :4000 router (already running)");
   }
-  console.log("\n  Swarm ready. Use: bun ~/.local/bin/claude-fast.ts <prompt>");
+
+  console.log("\n  All specialists spawning in background.");
+  console.log("  Check readiness: bun ~/.claude/local-llm/swarm.ts status");
+
+  // Hard exit — return to prompt immediately
+  process.exit(0);
 }
 
 async function cmdStop(): Promise<void> {
