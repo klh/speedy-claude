@@ -59,6 +59,23 @@ async function runPhase(phase: Phase): Promise<number> {
   return rc;
 }
 
+
+// ─── phase 0: local pre-tagging (cuts remote analyst tokens ~70%) ───
+import { spawn } from "node:child_process";
+const PRE_TAGGER = `${HOME}/.claude/local-llm/pre-tagger.ts`;
+if (existsSync(PRE_TAGGER)) {
+  appendFileSync(LOG, "--- pre-tagger (local 4B) ---
+");
+  const preTag = spawn("bun", [PRE_TAGGER], { stdio: "pipe" });
+  preTag.stdout.on("data", (d) => appendFileSync(LOG, d));
+  preTag.stderr.on("data", (d) => appendFileSync(LOG, d));
+  await new Promise((r) => preTag.on("exit", r));
+  // Tell the analyst about the pre-tagged file
+  ANALYST_PROMPT += "
+
+A pre-tagged summary is available at ${INSIGHTS}/pre-tagged.json — read it FIRST (it identifies error patterns already found by a fast local model, saving you tokens). Only investigate turns NOT already tagged.";
+}
+
 const ANALYST_PROMPT = `You are running as the llm-performance-analyst persona. FIRST read ${AGENTS}/llm-performance-analyst.md and follow its methodology exactly.
 
 Scope: Claude Code sessions from the last 24h. Find transcripts with: fd -e jsonl . ${HOME}/.claude/projects --changed-within 24h
