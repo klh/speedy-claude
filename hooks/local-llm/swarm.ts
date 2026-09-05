@@ -28,9 +28,25 @@ interface Specialist {
 }
 
 const SPECIALISTS: Specialist[] = [
-  { port: 8901, model: "mlx-community/Qwen2.5-Coder-32B-Instruct-4bit", label: "⚡ code", ram_gb: 10, tier: "resident" },
-  { port: 8902, model: "mlx-community/Qwen3-4B-Instruct-2507-4bit", label: "🏠 extract", ram_gb: 2, tier: "resident", flags: ["--chat-template-args", '{"enable_thinking":false}'] },
-  { port: 8903, model: "mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit", label: "🧠 reason", ram_gb: 14, tier: "resident" },
+  {
+    port: 8901, model: "mlx-community/Qwen2.5-Coder-32B-Instruct-4bit",
+    label: "⚡ code", ram_gb: 10, tier: "resident",
+    flags: [
+      "--prompt-cache-size", "10", "--prompt-cache-bytes", "4GB",
+      "--draft-model", "mlx-community/Qwen2.5-Coder-0.5B-Instruct-4bit",
+      "--num-draft-tokens", "3",
+    ],
+  },
+  {
+    port: 8902, model: "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+    label: "🏠 extract", ram_gb: 2, tier: "resident",
+    flags: ["--prompt-cache-size", "10", "--prompt-cache-bytes", "2GB"],
+  },
+  {
+    port: 8903, model: "mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit",
+    label: "🧠 reason", ram_gb: 14, tier: "resident",
+    flags: ["--prompt-cache-size", "5", "--prompt-cache-bytes", "8GB"],
+  },
   { port: 8904, model: "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ", label: "🔢 embed", ram_gb: 0.3, tier: "resident" },
   { port: 8905, model: "mlx-community/Qwen3-Reranker-0.6B-4bit", label: "🔄 rerank", ram_gb: 0.3, tier: "resident" },
   { port: 8906, model: "mlx-community/Qwen3.5-9B-MLX-4bit", label: "🌐 danish/general", ram_gb: 5.6, tier: "ondemand" },

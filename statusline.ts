@@ -5,6 +5,7 @@
 // the payload's own cwd; output is template literals, not printf %b escape
 // soup. LC_ALL irrelevant — no shell number formatting.
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 type Payload = {
   model?: { id?: string; display_name?: string };
@@ -63,6 +64,29 @@ const EFFORT = p.effort?.level ?? "";
 const EC = ["max", "xhigh"].includes(EFFORT) ? "1;31" : EFFORT === "high" ? "1;33" : EFFORT === "medium" ? "0;32" : EFFORT === "low" ? "1;30" : "";
 const ETAG = EC ? ` ${bk("·")}${c(EC, EFFORT)}` : "";
 
+// ---- swarm indicator ----
+let SWARM = "";
+{
+  const logFile = `${HOME}/.claude-insights/swarm-routing.log`;
+  try {
+    const lines = readFileSync(logFile, "utf8").trim().split("\n");
+    const last = lines[lines.length - 1];
+    if (last) {
+      const j = JSON.parse(last);
+      const icons: Record<string, string> = {
+        extract: "🏠", code: "⚡", reason: "🧠", remote: "☁️",
+        embed: "🔢", rerank: "🔄", translate: "🌐",
+      };
+      const icon = icons[j.category] ?? "❓";
+      const dur = j.duration_ms < 500 ? gr(j.duration_ms + "ms") : by(j.duration_ms + "ms");
+      const age = Math.round((Date.now() - new Date(j.ts).getTime()) / 1000);
+      if (age < 300) { // only show if recent (<5 min)
+        SWARM = `${SEP} ${icon} ${dur} ${DIM}${age}s ago${R}`;
+      }
+    }
+  } catch { /* no log file or parse error — no swarm indicator */ }
+}
+
 // ---- git part ----
 let GIT = "";
 const st = DIR ? git(DIR, "status", "-b", "--porcelain") : null;
@@ -97,4 +121,4 @@ const DUR = Math.round((p.cost?.total_duration_ms ?? 0) / 1000);
 const COST = (p.cost?.total_cost_usd ?? 0).toFixed(3);
 const tail = narrow ? "" : `${SEP} ${gr(API_DUR)}/${pu(DUR)}s${SEP}${gr(COST)}`;
 
-process.stdout.write(`${R}${ICON} [ ${MC(MODEL_NAME)}${R}${ETAG} ]  ${LOC}${GIT}${CHG}${CTX}${tail} ${ICON}\n`);
+process.stdout.write(`${R}${ICON} [ ${MC(MODEL_NAME)}${R}${ETAG} ]  ${LOC}${GIT}${CHG}${CTX}${SWARM}${tail} ${ICON}\n`);

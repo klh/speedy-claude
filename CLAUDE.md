@@ -50,6 +50,37 @@ Textual bulk replaces stay with `sd`/`ambr`; `ast-grep` for anything identifier/
 | Jira / Confluence | `atlassian` plugin |
 
 
+
+
+## GLOBAL RULE: Never Write Shell Scripts
+
+**Shell scripts are BANNED unless absolutely necessary (LaunchAgent plist pointers, one-line symlinks).**
+ALL logic, tooling, automation, and scripts MUST be written in TypeScript executed by Bun.
+This is non-negotiable and applies to every file, every skill, every hook, every tool.
+
+Why: shell scripts inevitably devolve into arg-parsing soup, pipe loops, quoting hell,
+and platform-dependent bugs. Bun/TS gives typed args, proper error handling, template
+literals, native JSON, and runs at native speed with ~15ms startup.
+
+If you find yourself writing `case \$1 in` or \`while IFS= read\` — STOP.
+Write a .ts file and run it with Bun instead.
+
+Exceptions (and ONLY these):
+- LaunchAgent ProgramArguments (must point to a script — point it at a Bun script)
+- One-line shell aliases in .zshrc
+- Existing brew/cargo install scripts (third-party)
+
+## Journalistic Standards (ALWAYS enforce)
+
+- **LLM outputs are UNVERIFIED by default.** Treat every claim from any model (local or remote) as a lead, not a fact.
+- **First-tier sources required for claims**: primary documents, official data, direct statements from named parties, peer-reviewed research. Second-tier (reputable news agencies, established journals) acceptable for corroboration.
+- **Never publish an unverified claim.** If a source cannot be confirmed, say so explicitly — "unverified" or "reported by [source]" — or omit the claim entirely.
+- **Distinguish facts from inference from speculation.** Label each appropriately. The newsroom's claim-ID system exists precisely for this.
+- **Multiple independent sources for contested claims.** Single-source claims carry the source name and a confidence qualifier.
+- **Right of reply.** Claims about named individuals or organizations should note that a response was sought (or include the response).
+- **Corrections are transparent.** When a claim is later found wrong, the correction is documented, not silently edited.
+- **This applies to ALL agent work** — not just the newsroom. Any time an agent states a fact, cite the source or mark it as inference.
+
 ## Agent CLI Interaction Lessons (from dosu.dev CLI login flow design)
 
 - **Ticket-based auth, not blocking login** — split into request + check commands; the agent process exits and resumes from a fresh process with just the ticket string. Never block the terminal while waiting for user browser interaction.
