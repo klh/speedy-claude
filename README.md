@@ -79,11 +79,11 @@ Register via `settings.example.json`.
 
 `settings.example.json` is a ready template: GLM/z.ai (or any Anthropic-compatible) env vars, `acceptEdits`, an evidence-based allowlist (fast CLI tools + `npm test`/`dotnet test`/`git fetch`/`npx tsc --noEmit`), and deny guardrails (`sudo rm`, force-push, `rm -rf ~/*`). Copy to `~/.claude/settings.json`, fill the token, adjust to your stack.
 
-## Skills — 35 active (klh-* variants + audited registry adds)
+## Skills — 36 active (klh-* variants + audited registry adds)
 
 A 2026-09 audit (`skillUsage` telemetry across months of sessions) found ~half the original skill pack was never invoked — pure context cost in every session. The active set is curated; the rest are parked in [`skills-available/`](skills-available/README.md) with a restore command (`git mv skills-available/<name> skills/`). Parked skills cost zero context.
 
-Highlights: `ast-grep` (structural search rules) · `docker` · `az` · `sqlite`/`sql-best-practice` · `csharp-best-practice` · `cli-speed-tools` · `code-simplifier` · `find-bugs` · `lit-dev` · `core-components` · `zod4` · `test-driven-development` · `systematic-debugging` · `openapi-directory-first` · `browser-testing-with-devtools` · `settings-audit` · `project-memory` — full table in CLAUDE.md's _Skills Quick Reference_.
+Highlights: `ast-grep` (structural search rules) · `docker` · `az` · `sqlite`/`sql-best-practice` · `csharp-best-practice` · `cli-speed-tools` · `code-simplifier` · `find-bugs` · `lit-dev` · `core-components` · `zod4` · `test-driven-development` · `systematic-debugging` · `openapi-directory-first` · `browser-testing-with-devtools` · `settings-audit` · `project-memory` · **`agentaccess`** (Danish services → AgentAccess.dk first; OSS/local-first MCP builder stack) — full table in CLAUDE.md's _Skills Quick Reference_.
 
 ## Slash Commands
 
@@ -125,18 +125,36 @@ Modular and DRY _within sanity_. Event mediator/composition over inheritance. Cl
 
 Say **`ultracode <task>`** or "use a workflow" in Claude Code to fan out an orchestrated multi-agent run — parallel review dimensions with adversarial verify passes, bulk migrations, research fan-outs. Default size medium (~≤15 agents). Works on GLM/z.ai setups; subagents inherit session model config.
 
-## MCP recommendations
+## MCP recommendations — OSS/local-first
 
-| Need                            | Server                                      |
-| ------------------------------- | ------------------------------------------- |
-| Browser testing / DOM / network | `chrome-devtools-mcp`                       |
-| Current library docs            | `context7` (`https://mcp.context7.com/mcp`) |
+Hard rule: **open-source, self-hosted, no paid tiers in the stack.** Model access is the only paid component. For Danish services, check [AgentAccess](https://agentaccess.dk) first (see the `agentaccess` skill for the full access hierarchy: official MCP → OpenAPI MCP Proxy → Har2MCP → Playwright MCP → Crawl4AI).
+
+| Need                            | Server/Tool                                       | License    |
+| ------------------------------- | ------------------------------------------------- | ---------- |
+| Browser testing / DOM / network | `chrome-devtools-mcp`                             | OSS        |
+| Current library docs            | `context7` (`https://mcp.context7.com/mcp`)       | free       |
+| Browser access for the model    | `Playwright MCP` (`@modelcontextprotocol/server`) | MIT        |
+| Build your own MCP (TS)         | `@prefecthq/fastmcp-ts` + Zod                     | Apache-2.0 |
+| Test/debug MCPs                 | `npx @modelcontextprotocol/inspector`             | MIT        |
+| Web → clean Markdown            | Crawl4AI (self-hosted Docker)                     | OSS        |
+| Undocumented APIs → MCP         | Har2MCP (HAR capture → tools)                     | OSS        |
 
 ```bash
 npm i -g chrome-devtools-mcp
 claude mcp add -s user chrome-devtools -- chrome-devtools-mcp
 claude mcp add -s user -t http context7 https://mcp.context7.com/mcp
 ```
+
+## Skill install gate (how to complete it)
+
+The `skill-install` gate blocks installs into skills dirs until a review approval is minted — by **you**, never the agent self-approving. After accepting a `skill-security-review` PASS:
+
+```bash
+approve-skill <source-ref>   # mints single-use, 24h, source-bound HMAC approval (~/​.local/bin)
+# then retry the install command — the gate consumes the approval
+```
+
+Requires `~/.claude/.skill-review-secret` (32-byte hex, 0600). Reference implementation: `hooks/approve-skill.ts` + `hooks/lib/approvals.ts`.
 
 ## Install
 
@@ -149,7 +167,7 @@ git clone https://github.com/klh/speedy-claude.git ~/.claude
 cp ~/.claude/settings.example.json ~/.claude/settings.json  # then edit token/allowlist
 ```
 
-This restores the complete setup: 35 skills, 16 personas, 5 hooks, slash commands, statusline, and CLAUDE.md. The seven `mj-*` personas additionally need a `midjourney` MCP server exposing `mj_imagine`, `mj_describe`, `mj_blend`, `mj_button`, `mj_job`.
+This restores the complete setup: 36 skills, 16 personas, 5 hooks, slash commands, statusline, and CLAUDE.md. The seven `mj-*` personas additionally need a `midjourney` MCP server exposing `mj_imagine`, `mj_describe`, `mj_blend`, `mj_button`, `mj_job`.
 
 ### Option 2: CLI tools only (no skills)
 
