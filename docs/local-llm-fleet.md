@@ -51,6 +51,11 @@ Change a model in one place, everything follows.
 Model-swap discipline: every swap lives behind one registry line, and the
 rollback is reverting that line. Bench before and after with the same battery.
 
+Rerank is a deliberate gap, not an accidental one: the 0.6B reranker server was
+retired when mlx_lm 0.31.x dropped the `/v1/rerank` route (embeddings stayed on
+a dedicated on-demand server). If RAG relevance work needs it again, add a
+dedicated embed/rerank server package — don't assume mlx_lm serves it.
+
 ## Routing: regex pre-filter, then a small classifier for the ambiguity band
 
 Request flow (all local, ~0 overhead for the common case):
