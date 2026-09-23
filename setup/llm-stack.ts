@@ -50,7 +50,7 @@ const FLEET: FleetMember[] = [
   {
     label: "reason",
     port: 8903,
-    model: "mlx-community/Qwen3.8-27B-4bit",
+    model: "mlx-community/Qwen3.5-35B-A3B-4bit",
     engine: "rapid",
     flags: ["--reasoning", "--enable-prefix-cache"],
   },

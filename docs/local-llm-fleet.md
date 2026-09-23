@@ -42,7 +42,7 @@ Change a model in one place, everything follows.
 | ---- | --------------------------------- | -------------------------- | ------ | ------ |
 | 8901 | Qwen3-Coder-30B-A3B-Instruct-4bit | code (MoE, 3B active)      | ~16GB  | rapid  |
 | 8902 | Qwen3-4B-Instruct-2507-4bit       | extract/simple             | ~2GB   | rapid  |
-| 8903 | Qwen3.8-27B-4bit                  | reason/architecture        | ~15GB  | rapid  |
+| 8903 | Qwen3.5-35B-A3B-4bit              | reason/architecture        | ~20GB  | rapid  |
 | 8904 | Qwen3-Embedding-0.6B-4bit-DWQ     | embed                      | ~0.3GB | mlx_lm |
 | 8905 | Qwen3-Reranker-0.6B-4bit          | rerank                     | ~0.3GB | mlx_lm |
 | 8906 | Qwen3.5-9B-4bit                   | danish/general (on demand) | ~5.6GB | rapid  |
