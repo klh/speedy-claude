@@ -5,3 +5,9 @@ node_modules/
 *.log
 .claude/.simplify-ignore-cache/
 node_modules/
+.qlty/logs/
+.qlty/out/
+.qlty/results/
+.qlty/configs/
+.qlty/plugin_cachedir/
+.qlty/sources/

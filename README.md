@@ -156,6 +156,19 @@ approve-skill <source-ref>   # mints single-use, 24h, source-bound HMAC approval
 
 Requires `~/.claude/.skill-review-secret` (32-byte hex, 0600). Reference implementation: `hooks/approve-skill.ts` + `hooks/lib/approvals.ts`.
 
+## Local LLM fleet (optional layer)
+
+Speedy-claude also encodes a local-inference layer: a specialist swarm of MLX
+models behind an Anthropic-compatible router — routine agent traffic never
+leaves the machine, with a typed-classifier leg (Kev) for ambiguous requests.
+Findings, fleet table, calibration notes, and gotchas:
+**[docs/local-llm-fleet.md](docs/local-llm-fleet.md)**.
+From-scratch setup on a new Mac (idempotent, argument-array spawns only):
+
+```bash
+bun setup/llm-stack.ts --dry-run
+```
+
 ## Install
 
 ### Option 1: Clone into ~/.claude (recommended — like dotfiles, full restore)
