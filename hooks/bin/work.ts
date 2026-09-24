@@ -308,6 +308,7 @@ if (cmd === "add") {
 	const it = get(id);
 	setState(id, "READY", null);
 	releaseClaim((it.owner_sid as string) ?? "", it.scope as string | null, it.id as string);
+	emit("work.released", id, { by: ((it.owner_sid as string) ?? "").slice(0, 8) });
 	console.log(`${cyan("·")} ${dim(`${id} → READY`)}`);
 } else if (cmd === "start") {
 	const id = pos()[0];
@@ -403,6 +404,7 @@ if (cmd === "add") {
 	if (!["CLAIMED", "RUNNING", "ORPHANED"].includes(it.state as string)) die(`${id} is ${it.state} — only CLAIMED/RUNNING/ORPHANED can be reclaimed`);
 	setState(id, "READY", null);
 	releaseClaim((it.owner_sid as string) ?? "", it.scope as string | null, it.id as string);
+	emit("work.released", id, { by: ((it.owner_sid as string) ?? "").slice(0, 8) });
 	console.log(`${cyan("·")} ${id} reclaimed → READY`);
 } else {
 	die("unknown command — try add | list | ready | mine | owned | show | take | release | start | done | fail | supersede | split | block | unblock | orphaned | reclaim");
