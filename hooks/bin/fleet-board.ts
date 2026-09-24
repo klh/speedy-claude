@@ -49,7 +49,7 @@ function board(): Record<string, unknown>[] {
 		.all() as { project: string }[];
 	return projects.map(({ project }) => {
 		const items = db
-			.query("SELECT id, state, owner_sid, title, priority, result_sha, updated_at FROM work_items WHERE project = ? ORDER BY priority DESC, id")
+			.query("SELECT id, state, owner_sid, title, priority, result_sha, requires, updated_at FROM work_items WHERE project = ? ORDER BY priority DESC, id")
 			.all(project) as any[];
 		const doneIds = new Set(items.filter((w) => w.state === "DONE").map((w) => w.id));
 		const blocked = new Set(
@@ -64,6 +64,7 @@ function board(): Record<string, unknown>[] {
 			owner: w.owner_sid,
 			title: w.title,
 			sha: w.result_sha,
+			requires: w.requires,
 			blocked: blocked.has(w.id),
 			updatedAgo: ago(w.updated_at),
 		});
@@ -191,6 +192,7 @@ header .right { margin-left:auto; display:flex; align-items:center; gap:12px; }
 #needsPanel .q .ans button { background:#141413; color:#d8900f; border:1px solid #d8900f; border-radius:2px; padding:4px 10px; font:10px ui-monospace,Menlo,monospace; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; }
 #needsPanel .q .ans button:disabled { opacity:.5; cursor:default; }
 #needsPanel .dismiss { color:#8a8781; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+.rq { color:#c96a4f; }
 select { background:#1c1b19; color:#e8e6e1; border:1px solid rgba(255,255,255,.12); border-radius:2px; padding:3px 8px; font:11px ui-monospace,Menlo,monospace; max-width:380px; }
 #wrap { display:flex; gap:24px; align-items:flex-start; }
 #board { flex:1; display:grid; grid-template-columns:repeat(3,minmax(240px,1fr)); gap:12px; align-content:start; overflow-x:auto; }
@@ -256,6 +258,7 @@ function card(w, focus, L, N){
   var cls = 'card' + (mine?' mine':'') + (changed?' flash':'') + (gated?' gated':'') + (needsIt?' need':'');
   var m = esc(w.owner ? (L[w.owner] || w.owner.slice(0,10)) : 'unclaimed') + ' · ' + (w.updatedAgo>=0 ? w.updatedAgo+'s' : '');
   if (w.sha) m += ' · @' + esc(String(w.sha).slice(0,7));
+  if (w.requires) m += ' · <span class="rq">needs ' + esc(String(w.requires)) + '</span>';
   return '<div class="' + cls + '"' + (needsIt ? ' onclick="openNeeds(\'' + w.owner + '\')"' : '') + '><span class="id">' + esc(w.id) + '</span>' + pill(w.state) + '<div class="t">' + esc(w.title).slice(0,90) + '</div><div class="m">' + m + '</div></div>';
 }
 function render(d) {

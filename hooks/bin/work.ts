@@ -200,7 +200,8 @@ function releaseClaim(sid: string, scope: string | null, itemId?: string): void 
 function renderRow(r: Item): string {
 	const [g, col] = GLYPH[r.state as string] ?? ["?", dim];
 	const owner = r.owner_sid ? dim(String(r.owner_sid).slice(0, 6)) : "";
-	return `  ${col(g)} ${cyan(String(r.id).padEnd(7))}${String(r.title).slice(0, 56)}${owner ? `  ${owner}` : ""}`;
+	const req = r.requires ? dim(` ⟨needs ${r.requires}⟩`) : "";
+	return `  ${col(g)} ${cyan(String(r.id).padEnd(7))}${String(r.title).slice(0, 56)}${owner ? `  ${owner}` : ""}${req}`;
 }
 
 function liveTranscript(sid: string): string | null {

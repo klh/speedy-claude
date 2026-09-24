@@ -5,7 +5,7 @@
 // (SESSION / REBIND / OWNED / READY / INBOX / HEAD). Stdout is injected as
 // session context. CLAUDE_FLEET_BOOTSTRAP=0 opts out entirely.
 import { existsSync, readFileSync } from "node:fs";
-import { openGovernorDb, projectIdentity } from "./lib/govdb.ts";
+import { openGovernorDb, projectIdentity, CAPABILITIES } from "./lib/govdb.ts";
 
 type In = { session_id?: string; source?: string };
 
@@ -33,10 +33,14 @@ const RULES =
 	"work gets work split. Stuck or need a colleague's context: " +
 	"coord consult/who-knows (questions, never ownership).";
 
+// top-level sessions are full agent runtimes — advertise the complete
+// capability set so capability-gated work stays takeable by them (lanes
+// inherit their caps from the parent via coord bootstrap --parent)
+const CAPS = CAPABILITIES.join(",");
 const UPSERT =
-	"INSERT INTO sessions (sid, project, role, parent_sid, worktree, started_at, hb, state) " +
-	"VALUES (?, ?, 'worker', NULL, NULL, ?, ?, 'RUNNING') " +
-	"ON CONFLICT(sid) DO UPDATE SET project = excluded.project, hb = excluded.hb, state = 'RUNNING'";
+	"INSERT INTO sessions (sid, project, role, parent_sid, worktree, started_at, hb, state, capabilities) " +
+	"VALUES (?, ?, 'worker', NULL, NULL, ?, ?, 'RUNNING', ?) " +
+	"ON CONFLICT(sid) DO UPDATE SET project = excluded.project, hb = excluded.hb, state = 'RUNNING', capabilities = COALESCE(excluded.capabilities, sessions.capabilities)";
 
 const DEAD_SQL =
 	"SELECT s.sid FROM sessions s WHERE s.project = ? AND s.state = 'CLOSED' " +
@@ -49,7 +53,7 @@ const OWNED_SQL =
 	"AND state NOT IN ('DONE','SUPERSEDED','FAILED') ORDER BY id";
 
 const db = openGovernorDb();
-db.query(UPSERT).run(sid, project, now, now);
+db.query(UPSERT).run(sid, project, now, now, CAPS);
 const out = [`SESSION ${sid.slice(0, 8)}  project=${pname(project)}`];
 
 // lineage: only `resume` may rebind — startup/clear/compact never touch
