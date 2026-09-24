@@ -95,6 +95,11 @@ coord resume <sid> --onto <new-head> --note "applyPreview: (x) → (x, ctx); Med
 - Spawn gate: READY work exists + fleet under target + rate headroom + acceptable coupling -> spawn; high coupling = review/test lanes, never more implementation lanes
 - Markdown carries architecture/spec/decisions only — never live task state
 
+### Consults (questions, not work)
+- Discover: `coord who-knows "query" [--scope src/x]` - ranks live sessions by recent claims / DONE work / scope touches; contextual beats nominal
+- Ask: `coord consult --best "<question>" [--scope s] --as <sid>` -> expert inbox gets `? C## from <asker>`; reply `coord consult-reply C## "<answer>" --as <expert>` (or `--decline`)
+- A consult never claims scope, never pauses a lane, never creates work. WORK = implement / CONSULT = answer / HANDOFF = take ownership. Cross-session questions use native @session messaging with who-knows for discovery.
+
 ### Claims
 - Every lane registers via `claim add <sid> <scope...> --intent "..."` at
   spawn; shared areas get BOTH lanes' claims; hot-mark only after an observed

@@ -401,6 +401,94 @@ if (cmd === "emit") {
 		).run(as, proj, old.role ?? "worker", from, old.worktree, now, now);
 	})();
 	console.log(`✓ ${from.slice(0, 8)} → ${as.slice(0, 8)}  work:${wMoved} claims:${cMoved} facts:${fMoved} events:${eMoved} (cursor carried, ${from.slice(0, 8)} CLOSED)`);
+} else if (cmd === "who-knows") {
+	// contextual expertise: who recently TOUCHED this beats nominal strength
+	const scope = arg("--scope");
+	const known = new Set(["--scope"]);
+	const pos: string[] = [];
+	for (let i = 0; i < rest.length; i++) {
+		if (known.has(rest[i])) {
+			i++;
+			continue;
+		}
+		if (rest[i].startsWith("--")) continue;
+		pos.push(rest[i]);
+	}
+	const q = pos.join(" ");
+	if (!q && !scope) die('usage: who-knows "query words" [--scope src/x]');
+	const rows = rankExperts(projectIdentity(), q, scope).slice(0, 5);
+	console.log(rows.map((r) => `${r.sid.slice(0, 8)}  ${r.score.toFixed(2)}  ${dim(r.hint)}`).join("\n") || dim("(no ranked session — nobody live has touched this)"));
+} else if (cmd === "consult") {
+	// a question, not work: no claims, no ownership change, no lane state.
+	// Fleet-internal transport (event bus); cross-session questions go via
+	// native @session messaging with who-knows for discovery.
+	const as = arg("--as");
+	const scope = arg("--scope");
+	const known = new Set(["--as", "--scope"]);
+	const pos: string[] = [];
+	for (let i = 0; i < rest.length; i++) {
+		if (known.has(rest[i])) {
+			i++;
+			continue;
+		}
+		if (rest[i].startsWith("--")) continue;
+		pos.push(rest[i]);
+	}
+	let expert: string | null = null;
+	let question: string;
+	if (rest.includes("--best")) {
+		question = pos.join(" ");
+		const best = rankExperts(projectIdentity(), question, scope)[0];
+		if (!best) die("no ranked expert — nobody live has touched this");
+		expert = best.sid;
+	} else {
+		expert = pos[0] ?? null;
+		question = pos.slice(1).join(" ");
+	}
+	if (!expert || !question) die('usage: consult [--best] "<question>" | consult <sid> "<question>" [--scope s] --as <asker>');
+	if (!db.query("SELECT 1 FROM sessions WHERE sid = ? AND project = ? AND state = 'RUNNING'").get(expert, projectIdentity())) die(`${expert.slice(0, 8)} is not a live session in this project`);
+	const r = db.query("INSERT INTO consults (project, asker_sid, expert_sid, question, scope, state, created_at) VALUES (?, ?, ?, ?, ?, 'OPEN', ?)").run(projectIdentity(), as, expert, question, scope, Date.now());
+	const cid = `C${r.lastInsertRowid}`;
+	db.query("INSERT INTO events (ts, source, kind, scope, payload, target) VALUES (?, ?, 'consult', ?, ?, ?)").run(Date.now(), as, scope, JSON.stringify({ consult: cid, q: question }), expert);
+	console.log(`CONSULT ${cyan(cid)} ${dim("→")} ${expert.slice(0, 8)}`);
+} else if (cmd === "consult-reply") {
+	const as = arg("--as");
+	const known = new Set(["--as"]);
+	const pos: string[] = [];
+	for (let i = 0; i < rest.length; i++) {
+		if (known.has(rest[i])) {
+			i++;
+			continue;
+		}
+		if (rest[i].startsWith("--")) continue;
+		pos.push(rest[i]);
+	}
+	const decline = rest.includes("--decline");
+	const cid = pos[0];
+	const text = pos.slice(1).join(" ");
+	if (!cid || (!text && !decline) || !as) die('usage: consult-reply <C##> "<answer>" [--decline] --as <expert-sid>');
+	const c = db.query("SELECT * FROM consults WHERE id = ?").get(Number(String(cid).replace(/^C/i, ""))) as { id: number; asker_sid: string; expert_sid: string; state: string } | undefined;
+	if (!c) die(`no such consult: ${cid}`);
+	if (c.expert_sid !== as) die(`${cid} is addressed to ${String(c.expert_sid).slice(0, 8)}, not you`);
+	if (c.state !== "OPEN") die(`${cid} is ${c.state}`);
+	const st = decline ? "DECLINED" : "ANSWERED";
+	db.query("UPDATE consults SET state = ?, answer = ?, answered_at = ? WHERE id = ?").run(st, decline ? null : text, Date.now(), c.id);
+	db.query("INSERT INTO events (ts, source, kind, scope, payload, target) VALUES (?, ?, 'consult.answer', NULL, ?, ?)").run(Date.now(), as, JSON.stringify({ consult: cid, state: st, answer: decline ? null : text }), c.asker_sid);
+	console.log(`${st} ${cyan(String(cid))} ${dim("→")} ${String(c.asker_sid).slice(0, 8)}`);
+} else if (cmd === "consults") {
+	// my consult queue: OPEN questions addressed to me + my recent threads
+	const as = arg("--as");
+	if (!as) die("usage: consults --as <sid>");
+	const rows = db.query("SELECT id, asker_sid, question, state, answer FROM consults WHERE project = ? AND (expert_sid = ? OR asker_sid = ?) ORDER BY id DESC LIMIT 20").all(projectIdentity(), as, as) as { id: number; asker_sid: string; question: string; state: string; answer: string | null }[];
+	console.log(
+		rows
+			.map((r) => {
+				const cid = `C${r.id}`;
+				if (r.state === "OPEN") return `${red("?")} ${cyan(cid)} ${dim(`from ${String(r.asker_sid).slice(0, 8)}`)} ${r.question.slice(0, 60)}`;
+				return `${green("✓")} ${cyan(cid)} ${dim(r.state)} ${String(r.answer ?? "").slice(0, 60)}`;
+			})
+			.join("\n") || dim("(no consults)"),
+	);
 } else if (cmd === "doctor-session") {
 	// rebind integrity: NO live coordination state may point at a closed
 	// predecessor — everything here should be zero after resume-session
@@ -431,9 +519,12 @@ if (cmd === "emit") {
 	const s = db.query("DELETE FROM sessions WHERE state = 'CLOSED' AND hb < ?").run(cut).changes;
 	const c = db.query("DELETE FROM cursors WHERE sid NOT IN (SELECT sid FROM sessions)").run().changes;
 	const f = db.query("DELETE FROM facts WHERE key LIKE 'lane.%' AND ts < ?").run(cut).changes;
-	console.log(`gc: ${e} events, ${s} closed sessions, ${c} stale cursors, ${f} lane facts pruned (>${days}d; work ledger untouched)`);
+	// consults: open questions expire after 1h; closed threads age out
+	const x = db.query("UPDATE consults SET state = 'EXPIRED' WHERE state = 'OPEN' AND created_at < ?").run(Date.now() - 3_600_000).changes;
+	const cd = db.query("DELETE FROM consults WHERE state IN ('ANSWERED','DECLINED','EXPIRED') AND answered_at < ? AND answered_at IS NOT NULL").run(cut).changes;
+	console.log(`gc: ${e} events, ${s} closed sessions, ${c} stale cursors, ${f} lane facts, ${x} consults expired, ${cd} consult threads pruned (>${days}d; work ledger untouched)`);
 } else {
-	die("unknown command — try emit | poll | wait | fact | bootstrap | state | inbox | capsule | pause | paused | resume | resumed | resume-session | doctor-session | gc | fleet");
+	die("unknown command — try emit | poll | wait | fact | bootstrap | state | inbox | capsule | pause | paused | resume | resumed | resume-session | doctor-session | who-knows | consult | consult-reply | consults | gc | fleet");
 }
 
 function scopeCovers(a: string, b: string): boolean {
@@ -441,4 +532,44 @@ function scopeCovers(a: string, b: string): boolean {
 	const pa = a.replace(/\/\*\*?$/, "");
 	const pb = b.replace(/\/\*\*?$/, "");
 	return pa !== a && (b.startsWith(`${pa}/`) || b === pa);
+}
+
+// contextual expertise ranking for who-knows / consult --best. Score =
+// claims 40% / recent DONE work 25% / recent scope touches 20% / role 10% /
+// heartbeat recency 5%. Only live sessions in the project.
+function rankExperts(project: string, q: string, scope: string | null): { sid: string; score: number; hint: string }[] {
+	const toks = [...new Set([...(scope ?? "").split(/[^a-z0-9_.]+/), ...q.toLowerCase().split(/[^a-z0-9_.]+/)].filter((t) => t.length > 2))];
+	const now = Date.now();
+	const live = db.query("SELECT sid, role, hb FROM sessions WHERE project = ? AND state = 'RUNNING'").all(project) as { sid: string; role: string; hb: number }[];
+	const hits = (hay: string): number => toks.reduce((n, t) => n + (hay.toLowerCase().includes(t) ? 1 : 0), 0);
+	const rows: { sid: string; score: number; hint: string }[] = [];
+	for (const s of live) {
+		const claims = db.query("SELECT scope, intent FROM claims WHERE sid = ?").all(s.sid) as { scope: string; intent: string | null }[];
+		let claimN = 0;
+		let hint = "";
+		for (const c of claims) {
+			let m = hits(`${c.scope} ${c.intent ?? ""}`);
+			if (scope && scopeCovers(c.scope, scope)) m = Math.max(m, 3);
+			if (m > claimN) {
+				claimN = m;
+				hint = c.intent ?? c.scope;
+			}
+		}
+		const done = db.query("SELECT title FROM work_items WHERE project = ? AND owner_sid = ? AND state = 'DONE' AND updated_at > ?").all(project, s.sid, now - 6 * 3_600_000) as { title: string }[];
+		let workN = 0;
+		for (const d of done) {
+			const m = hits(d.title);
+			if (m > workN) {
+				workN = m;
+				hint = hint || d.title;
+			}
+		}
+		const touches = db.query("SELECT scope FROM events WHERE source = ? AND ts > ? AND scope IS NOT NULL").all(s.sid, now - 6 * 3_600_000) as { scope: string | null }[];
+		const touchN = touches.reduce((n, t) => Math.max(n, hits(t.scope ?? "")), 0);
+		const roleN = s.role === "coordinator" ? 1 : 0;
+		const rec = Math.max(0, 1 - (now - s.hb) / (30 * 60_000));
+		const score = 0.4 * Math.min(1, claimN / 3) + 0.25 * Math.min(1, workN / 2) + 0.2 * Math.min(1, touchN / 2) + 0.1 * roleN + 0.05 * rec;
+		if (score > 0.02) rows.push({ sid: s.sid, score, hint: hint.slice(0, 50) });
+	}
+	return rows.sort((a, b) => b.score - a.score);
 }
