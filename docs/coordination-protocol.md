@@ -36,6 +36,7 @@ bun ~/.claude/bin/coord.ts emit landed --scope <scope> --sha <sha> --as <sid>
 - Lanes waiting on another lane: `coord wait --as <sid> --scope <other-scope> --max-seconds 600`
   (adaptive 250ms→2s backoff, instant wake)
 - **Direct messages are interrupts-only**: STOP, CONFLICT, DEPENDENCY_CHANGED,
+- **Transport guarantees**: `coord` events/inbox are the guaranteed unattended path; native cross-session messaging is permission-mode sensitive (may queue for human approval) - opportunistic only. Retired ledgers become tombstone files pointing at the Work Graph; never append operational state to them.
   NEED_DECISION. Everything else is a `coord` event/fact.
 
 ### Lane completion reports (delta-only, one source of truth)
