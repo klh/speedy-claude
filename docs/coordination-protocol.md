@@ -37,24 +37,26 @@ bun ~/.claude/bin/coord.ts emit landed --scope <scope> --sha <sha> --as <sid>
 - **Direct messages are interrupts-only**: STOP, CONFLICT, DEPENDENCY_CHANGED,
   NEED_DECISION. Everything else is a `coord` event/fact.
 
-### Lane completion reports (delta-only)
-Success:
+### Lane completion reports (delta-only, one source of truth)
+The machine event IS the report — the coordinator renders prose from it:
+
+```bash
+coord emit landed --sha <sha> --gate=pass --as <sid>       # success (defaults: unstated = normal)
+coord emit landed --sha <sha> --gate=pass --artifact=fresh --driveby=row36 --as <sid>
+coord emit blocked --scope <scope> --as <sid> --note "expected 28, passed 22 — cause one-liner"
+```
+
+Human rendering stays terse — success needs only deviations:
+
 ```text
 DONE <sha>
-gate PASS
-artifact stale|fresh
+DONE <sha> artifact=fresh driveby=row36
+BLOCKED <scope> 22/28 stitchRender host contract
 ```
-Failure expands:
-```text
-BLOCKED
-test: <scope>
-expected: <n> / passed: <m>
-cause: <one line>
-```
+
 Never narrate implementation history, never repeat test counts on success,
-never include prose evidence when a structured field exists. Emit the machine
-form too: `coord emit landed --sha <sha> --as <sid> --note "gate:pass"`.
-Keep exact counts in logs/facts — not in the report.
+never include prose evidence when a structured field exists. Exact counts go
+to facts/logs, not the report.
 
 ### Integration ladder
 - Per-lane: cheap targeted checks

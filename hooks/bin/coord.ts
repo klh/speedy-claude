@@ -50,12 +50,19 @@ const green = paint("32");
 
 if (cmd === "emit") {
 	const kind = rest[0];
-	if (!kind) die("usage: emit <kind> [--scope s] [--sha x] [--note \"...\"] [--as sid]");
+	if (!kind) die("usage: emit <kind> [--scope s] [--sha x] [--note \"...\"] [--field=value ...] [--as sid]");
 	const scope = arg("--scope");
 	const sha = arg("--sha");
 	const note = arg("--note");
 	const source = arg("--as") ?? "unknown";
-	const payload = JSON.stringify({ ...(sha ? { sha } : {}), ...(note ? { note } : {}) });
+	// arbitrary --key=value passthrough: the event IS the completion report
+	// (e.g. --gate=pass --artifact=stale) — one source of truth, no retelling
+	const extra: Record<string, string> = {};
+	for (const t of rest.slice(1)) {
+		const m = /^--([\w-]+)=(.+)$/.exec(t);
+		if (m && !["scope", "sha", "note", "as"].includes(m[1])) extra[m[1]] = m[2];
+	}
+	const payload = JSON.stringify({ ...(sha ? { sha } : {}), ...(note ? { note } : {}), ...extra });
 	db.query("INSERT INTO events (ts, source, kind, scope, payload) VALUES (?, ?, ?, ?, ?)").run(
 		Date.now(),
 		source,
@@ -79,10 +86,13 @@ if (cmd === "emit") {
 	if (kinds.length) rows = rows.filter((r) => kinds.includes(r.kind));
 	rows = rows.slice(0, limit);
 	for (const r of rows) {
-		const p = r.payload ? (JSON.parse(r.payload) as { sha?: string; note?: string }) : {};
+		const { sha, note, ...restP } = r.payload ? (JSON.parse(r.payload) as Record<string, string>) : {};
 		const ago = Math.max(0, Math.round((Date.now() - r.ts) / 1000));
+		const extra = Object.entries(restP)
+			.map(([k, v]) => `${dim(`${k}=`)}${v}`)
+			.join(" ");
 		console.log(
-			`  ${dim(`#${r.id}`)} ${dim(`${ago}s`.padStart(4))}  ${cyan(r.kind.padEnd(18))}${dim(r.source.slice(0, 8).padEnd(9))}${r.scope ? `${r.scope}  ` : ""}${p.sha ? green(`@${p.sha.slice(0, 8)}  `) : ""}${p.note ? dim(`— ${p.note}`) : ""}`,
+			`  ${dim(`#${r.id}`)} ${dim(`${ago}s`.padStart(4))}  ${cyan(r.kind.padEnd(18))}${dim(r.source.slice(0, 8).padEnd(9))}${r.scope ? `${r.scope}  ` : ""}${sha ? green(`@${sha.slice(0, 8)}  `) : ""}${Object.keys(restP).length ? `${extra}  ` : ""}${note ? dim(`— ${note}`) : ""}`,
 		);
 	}
 	const latest = rows.length ? Math.max(...rows.map((r) => r.id)) : since; // advance only past SHOWN events
@@ -107,12 +117,17 @@ if (cmd === "emit") {
 			if (kinds.length) rows = rows.filter((r) => kinds.includes(r.kind));
 			if (rows.length) {
 				for (const r of rows) {
-					const p = r.payload ? (JSON.parse(r.payload) as { sha?: string; note?: string }) : {};
-					console.log(`#${r.id} ${r.source.slice(0, 8)} ${r.kind}${r.scope ? ` ${r.scope}` : ""}${p.sha ? ` @${p.sha.slice(0, 8)}` : ""}${p.note ? ` — ${p.note}` : ""}`);
+					const { sha, note, ...restP } = r.payload ? (JSON.parse(r.payload) as Record<string, string>) : {};
+					const extra = Object.entries(restP)
+						.map(([k, v]) => `${dim(`${k}=`)}${v}`)
+						.join(" ");
+					console.log(
+						`  ${dim(`#${r.id}`)} ${r.source.slice(0, 8)} ${cyan(r.kind)}${r.scope ? ` ${r.scope}` : ""}${sha ? green(`@${sha.slice(0, 8)}`) : ""}${Object.keys(restP).length ? `  ${extra}` : ""}${note ? dim(` — ${note}`) : ""}`,
+					);
 				}
-				const latest = db.query("SELECT COALESCE(MAX(id), 0) AS id FROM events").get() as { id: number };
-				if (cur) db.query("UPDATE cursors SET event_id = ? WHERE sid = ?").run(latest.id, as);
-				else db.query("INSERT INTO cursors (sid, event_id) VALUES (?, ?)").run(as, latest.id);
+				const shownMax = Math.max(...rows.map((r) => r.id));
+				if (cur) db.query("UPDATE cursors SET event_id = ? WHERE sid = ?").run(shownMax, as);
+				else db.query("INSERT INTO cursors (sid, event_id) VALUES (?, ?)").run(as, shownMax);
 				process.exit(0);
 			}
 			if (Date.now() > deadline) {
