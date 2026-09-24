@@ -186,9 +186,15 @@ function autoClaim(sid: string, scope: string | null): void {
 	if (!scope) return;
 	db.query("INSERT OR REPLACE INTO claims (sid, scope, intent, hot, ts, tp) VALUES (?, ?, 'work-graph', 0, ?, ?)").run(sid, scope, Date.now(), liveTranscript(sid) ?? "");
 }
-function releaseClaim(sid: string, scope: string | null): void {
-	if (!scope) return;
-	db.query("DELETE FROM claims WHERE sid = ? AND scope = ?").run(sid, scope);
+function releaseClaim(sid: string, scope: string | null, itemId?: string): void {
+	// release the autoClaim (sid,scope) AND legacy/intent-scoped claims that
+	// reference this item — scopeless items otherwise leak claims on DONE
+	db.query("DELETE FROM claims WHERE sid = ? AND (scope = ? OR (? IS NOT NULL AND intent LIKE ? || ' %'))").run(
+		sid,
+		scope,
+		itemId ?? null,
+		itemId ?? "",
+	);
 }
 
 function renderRow(r: Item): string {
@@ -300,7 +306,7 @@ if (cmd === "add") {
 	if (!id) die("usage: release <id> [--as sid]");
 	const it = get(id);
 	setState(id, "READY", null);
-	releaseClaim((it.owner_sid as string) ?? "", it.scope as string | null);
+	releaseClaim((it.owner_sid as string) ?? "", it.scope as string | null, it.id as string);
 	console.log(`${cyan("·")} ${dim(`${id} → READY`)}`);
 } else if (cmd === "start") {
 	const id = pos()[0];
@@ -315,7 +321,7 @@ if (cmd === "add") {
 	const tx = db.transaction(() => {
 		setState(id, "DONE", null, sha);
 		emit("work.done", id, { sha: sha ?? "" });
-		releaseClaim((it.owner_sid as string) ?? "", it.scope as string | null);
+		releaseClaim((it.owner_sid as string) ?? "", it.scope as string | null, it.id as string);
 	});
 	tx();
 	rollUp(id);
@@ -395,7 +401,7 @@ if (cmd === "add") {
 	const it = get(id ?? "");
 	if (!["CLAIMED", "RUNNING", "ORPHANED"].includes(it.state as string)) die(`${id} is ${it.state} — only CLAIMED/RUNNING/ORPHANED can be reclaimed`);
 	setState(id, "READY", null);
-	releaseClaim((it.owner_sid as string) ?? "", it.scope as string | null);
+	releaseClaim((it.owner_sid as string) ?? "", it.scope as string | null, it.id as string);
 	console.log(`${cyan("·")} ${id} reclaimed → READY`);
 } else {
 	die("unknown command — try add | list | ready | mine | owned | show | take | release | start | done | fail | supersede | split | block | unblock | orphaned | reclaim");

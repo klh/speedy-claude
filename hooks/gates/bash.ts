@@ -7,7 +7,22 @@ import { parse } from "shell-quote";
 import { allow, deny, nudge, type HookInput } from "../lib/hookio.ts";
 import { have, run } from "../lib/run.ts";
 import { verifyAndConsume, extractSourceRef } from "../lib/approvals.ts";
-import { resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+
+// governor-bypass section: shell writes must respect governor leases
+const GOV = `${process.env.HOME}/.cache/claude-governor`;
+const canonPath = (p: string): string => {
+  try {
+    return realpathSync(p);
+  } catch {
+    try {
+      return `${realpathSync(dirname(p))}/${basename(p)}`;
+    } catch {
+      return resolve(p);
+    }
+  }
+};
 
 // ---- module-scope constants (allocated once, not per call) ----
 const WRAPPERS = new Set(["sudo", "nice", "env", "command", "nohup", "time"]);
@@ -66,13 +81,22 @@ export function bashGate(hook: HookInput): never {
 
   // ---- secrets (git commit / push) ----
   if (have("gitleaks")) {
-    let isCommit = false, isPush = false, repoDir = CWD;
+    let isCommit = false, isPush = false;
+    let repoDir = CWD, segCwd = CWD;
     for (const w of SEGS) {
-      if (verb(w) !== "git") continue;
+      const v = verb(w);
+      // track cd segments: `cd X && git push` must scan X, not hook.cwd
+      // (the session-cwd repo may hold secrets the pushed repo does not)
+      if (v === "cd") {
+        const target = w[w.length - 1];
+        if (target && !target.startsWith("<op")) segCwd = target.startsWith("/") ? target : resolve(segCwd, target);
+      }
+      if (v !== "git") continue;
       if (w.includes("--no-verify"))
         deny("secrets-gate: --no-verify in an agent command is denied by policy. If you are the USER, run the git command in your own terminal.");
       if (w.includes("commit")) isCommit = true;
       if (w.includes("push")) isPush = true;
+      repoDir = segCwd;
       const c = w.indexOf("-C");
       if (c !== -1 && w[c + 1]) repoDir = w[c + 1].startsWith("/") ? w[c + 1] : resolve(repoDir, w[c + 1]);
       const gd = w.find((a) => a.startsWith("--git-dir="));
@@ -83,6 +107,56 @@ export function bashGate(hook: HookInput): never {
         deny("gitleaks found secrets in STAGED content. Remove the secret (rotate if real). --no-verify is not available to agents.");
       if (isPush && !run("gitleaks", ["git", ".", "--redact", "--no-banner"], { cwd: repoDir }).ok)
         deny("gitleaks found secrets in commit history headed for the remote. Rotate the credential and rewrite/purge history. --no-verify is not available to agents.");
+    }
+  }
+
+  // ---- governor bypass: shell writes to leased paths (BEFORE edit-enforce:
+  // nudge() exits the process, so deny checks must run before any nudge) ----
+  {
+    const LOCKS_FILE = `${GOV}/locks.json`;
+    const locks = existsSync(LOCKS_FILE)
+      ? (JSON.parse(readFileSync(LOCKS_FILE, "utf8")) as Record<string, { sid: string; tool: string; ts: number; hash?: string }>)
+      : {};
+    const keys = Object.keys(locks);
+    if (keys.length > 0) {
+      const sid = hook.session_id ?? "unknown";
+      const isSubagent = (hook.transcript_path ?? "").includes("/subagents/");
+      const exPath = `${GOV}/exempt.json`;
+      const exempt =
+        !isSubagent && existsSync(exPath) && (JSON.parse(readFileSync(exPath, "utf8")) as string[]).includes(sid);
+      const targets: string[] = [];
+      for (const w of SEGS) {
+        const v = verb(w);
+        // explicit write redirects (>, >>) — input redirects excluded
+        for (let i = 0; i < w.length; i++) {
+          if ((w[i] === "<op:>" || w[i] === "<op:>>") && w[i + 1] && !String(w[i + 1]).startsWith("<op")) {
+            targets.push(String(w[i + 1]));
+          }
+        }
+        const vi = w.indexOf(v);
+        const rest = vi >= 0 ? w.slice(vi + 1) : w;
+        if (["tee", "touch", "truncate", "sd", "ambr"].includes(v)) {
+          for (const t of rest) if (!t.startsWith("-")) targets.push(t);
+        }
+        if (["cp", "mv", "rsync", "ditto"].includes(v)) {
+          const last = rest[rest.length - 1];
+          if (last && !last.startsWith("-")) targets.push(last);
+        }
+        if (v === "rm") for (const t of rest) if (!t.startsWith("-")) targets.push(t);
+        if (v === "dd") for (const kv of rest) if (kv.startsWith("of=")) targets.push(kv.slice(3));
+      }
+      for (const t of targets) {
+        if (!t || throwaway(t)) continue;
+        const P = canonPath(resolve(CWD, t));
+        const hit = keys.find((k) => k === P);
+        if (hit && locks[hit] && locks[hit].sid !== sid && !exempt) {
+          deny(
+            `GOVERNOR: shell write to ${P} blocked — leased to another agent (session ${locks[hit].sid.slice(0, 8)}). ` +
+              `Use Edit/Write (governed), or SendMessage to "main" for arbitration.`,
+          );
+        }
+        // own lease or no lease → allowed; governor.ts renews/claims on Edit/Write
+      }
     }
   }
 
