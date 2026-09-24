@@ -4,6 +4,7 @@
 // active work) and source is `resume`, then injects the restart packet
 // (SESSION / REBIND / OWNED / READY / INBOX / HEAD). Stdout is injected as
 // session context. CLAUDE_FLEET_BOOTSTRAP=0 opts out entirely.
+import { existsSync, readFileSync } from "node:fs";
 import { openGovernorDb, projectIdentity } from "./lib/govdb.ts";
 
 type In = { session_id?: string; source?: string };
@@ -74,5 +75,20 @@ if (mine.length || inbox > 0 || readyN > 0 || head) {
 	const owned = mine.map((w) => `${w.id}[${w.state}] ${w.title.slice(0, 40)}`).join(", ");
 	out.push(`OWNED ${mine.length}${owned ? `: ${owned}` : ""}  READY ${readyN}  INBOX ${inbox}${head ? `  head=${head.slice(0, 7)}` : ""}`);
 	out.push(RULES);
+}
+
+// legacy-ledger notice: known operational-ledger names, unmarked = old habit
+// may still treat them as live. One terse line, first match only. Deterministic
+// filename check only — no content classification, no auto-migration.
+const LEDGERS = ["MASTER-TASK-LEDGER.md", "TODO.md", "TASKS.md", "BACKLOG.md", "PROGRESS.md", "STATUS.md", "ROADMAP.md"];
+outer: for (const dir of [".", "docs", "docs/design"]) {
+	for (const name of LEDGERS) {
+		const p = `${process.cwd()}/${dir === "." ? "" : `${dir}/`}${name}`;
+		try {
+			if (!existsSync(p) || readFileSync(p, "utf8").includes("HISTORICAL / DESIGN RECORD")) continue;
+			out.push(`LEGACY LEDGER ${dir === "." ? "" : `${dir}/`}${name} — operational state belongs in the Work Graph (register items, add the HISTORICAL banner); never append progress there`);
+			break outer;
+		} catch {}
+	}
 }
 console.log(out.join("\n"));
