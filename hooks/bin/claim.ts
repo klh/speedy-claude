@@ -37,6 +37,16 @@ const die = (m: string): never => {
 	process.exit(2);
 };
 
+// output polish — quiet ANSI, disabled when piped or NO_COLOR
+const tty = process.stdout.isTTY && !process.env.NO_COLOR;
+const paint =
+	(code: string) =>
+	(s: string): string =>
+		tty ? `\x1b[${code}m${s}\x1b[0m` : s;
+const dim = paint("2");
+const cyan = paint("36");
+const amber = paint("33");
+
 // one shared connection shape with the gates — WAL/schema/bootstrap fixes live
 // in ONE module (hooks/lib/govdb.ts), not per-tool copies
 const db: Database = openGovernorDb();
@@ -131,9 +141,9 @@ if (cmd === "add") {
 		bySid.set(r.sid, cur);
 	}
 	const out = [...bySid.entries()].map(([sid, c]) =>
-		`${sid.slice(0, 8)}  ${c.hot ? "HOT " : "soft"}  ${c.scopes.join(" ")}${c.intent ? `  — ${c.intent}` : ""}`,
+		`  ${dim(sid.slice(0, 8))}  ${c.hot ? amber("HOT ") : dim("soft")}  ${cyan(c.scopes.join(" "))}${c.intent ? dim(`  — ${c.intent}`) : ""}`,
 	);
-	console.log(out.length ? out.join("\n") : "(no claims)");
+	console.log(out.length ? out.join("\n") : dim("(no claims)"));
 } else {
 	die(`unknown command "${cmd}" — try add | release | hot | cool | doctor | list`);
 }

@@ -38,6 +38,16 @@ const arg = (name: string): string | null => {
 	return i >= 0 ? (rest[i + 1] ?? null) : null;
 };
 
+// output polish — quiet ANSI, disabled when piped or NO_COLOR
+const tty = process.stdout.isTTY && !process.env.NO_COLOR;
+const paint =
+	(code: string) =>
+	(s: string): string =>
+		tty ? `\x1b[${code}m${s}\x1b[0m` : s;
+const dim = paint("2");
+const cyan = paint("36");
+const green = paint("32");
+
 if (cmd === "emit") {
 	const kind = rest[0];
 	if (!kind) die("usage: emit <kind> [--scope s] [--sha x] [--note \"...\"] [--as sid]");
@@ -53,7 +63,7 @@ if (cmd === "emit") {
 		scope,
 		payload,
 	);
-	console.log(`event queued (#${(db.query("SELECT last_insert_rowid() AS id").get() as { id: number }).id})`);
+	console.log(`${green("✓")} ${dim(`event queued #${(db.query("SELECT last_insert_rowid() AS id").get() as { id: number }).id}`)}`);
 } else if (cmd === "poll") {
 	const as = arg("--as");
 	const scope = arg("--scope");
@@ -61,22 +71,26 @@ if (cmd === "emit") {
 	const limit = Number(arg("--limit") ?? 50);
 	const cur = as ? (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(as) as { event_id: number } | null) : null;
 	const since = cur?.event_id ?? 0;
-	let rows = db
-		.query("SELECT id, ts, source, kind, scope, payload FROM events WHERE id > ? ORDER BY id LIMIT ?")
-		.all(since, limit) as Ev[];
+	// fetch all past the cursor, filter in TS, THEN limit — a SQL LIMIT here
+	// would cut off the newest matching events; and the cursor may only advance
+	// to what was actually SHOWN, or filtered consumers silently lose events
+	let rows = db.query("SELECT id, ts, source, kind, scope, payload FROM events WHERE id > ? ORDER BY id").all(since) as Ev[];
 	if (scope) rows = rows.filter((r) => r.scope && (r.scope === scope || scopeCovers(r.scope, scope) || scopeCovers(scope, r.scope)));
 	if (kinds.length) rows = rows.filter((r) => kinds.includes(r.kind));
+	rows = rows.slice(0, limit);
 	for (const r of rows) {
 		const p = r.payload ? (JSON.parse(r.payload) as { sha?: string; note?: string }) : {};
 		const ago = Math.max(0, Math.round((Date.now() - r.ts) / 1000));
-		console.log(`#${r.id} ${ago}s ${r.source.slice(0, 8)} ${r.kind}${r.scope ? ` ${r.scope}` : ""}${p.sha ? ` @${p.sha.slice(0, 8)}` : ""}${p.note ? ` — ${p.note}` : ""}`);
+		console.log(
+			`  ${dim(`#${r.id}`)} ${dim(`${ago}s`.padStart(4))}  ${cyan(r.kind.padEnd(18))}${dim(r.source.slice(0, 8).padEnd(9))}${r.scope ? `${r.scope}  ` : ""}${p.sha ? green(`@${p.sha.slice(0, 8)}  `) : ""}${p.note ? dim(`— ${p.note}`) : ""}`,
+		);
 	}
-	const latest = db.query("SELECT COALESCE(MAX(id), 0) AS id FROM events").get() as { id: number };
-	if (as) {
-		if (cur) db.query("UPDATE cursors SET event_id = ? WHERE sid = ?").run(latest.id, as);
-		else db.query("INSERT INTO cursors (sid, event_id) VALUES (?, ?)").run(as, latest.id);
+	const latest = rows.length ? Math.max(...rows.map((r) => r.id)) : since; // advance only past SHOWN events
+	if (as && rows.length) {
+		if (cur) db.query("UPDATE cursors SET event_id = ? WHERE sid = ?").run(latest, as);
+		else db.query("INSERT INTO cursors (sid, event_id) VALUES (?, ?)").run(as, latest);
 	}
-	if (!rows.length) console.log("(no new events)");
+	if (!rows.length) console.log(dim("(no new events)"));
 	} else if (cmd === "wait") {
 		// adaptive long-poll: 250ms while events flow, backing off to 2s when
 		// idle; resets to fast the moment anything arrives. Near-instant local

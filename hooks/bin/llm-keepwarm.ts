@@ -28,5 +28,16 @@ async function ping(port: number): Promise<number> {
 }
 
 const results = await Promise.all(PORTS.map(ping));
-const parts = PORTS.map((p, i) => `:${p}=${results[i] < 0 ? "down" : `${results[i]}ms`}`);
-console.log(`keepwarm ${new Date().toISOString()} ${parts.join(" ")}`);
+const tty = process.stdout.isTTY && !process.env.NO_COLOR;
+const paint =
+	(code: string) =>
+	(s: string): string =>
+		tty ? `\x1b[${code}m${s}\x1b[0m` : s;
+const dim = paint("2");
+const green = paint("32");
+const red = paint("31");
+const fmtMs = (ms: number) => (ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`);
+const parts = PORTS.map((p, i) =>
+	results[i] < 0 ? red(`✗ :${p} down`) : `${green("✓")} ${dim(`:${p}`)} ${dim(fmtMs(results[i]))}`,
+);
+console.log(`${dim(`keepwarm ${new Date().toISOString()}`)}  ${parts.join("  ")}`);

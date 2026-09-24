@@ -5,7 +5,7 @@
 // All external processes are spawned with argument arrays (no shell strings).
 //
 //   bun setup/llm-stack.ts                  # deps + models + metal smoke check
-//   bun setup/llm-stack.ts --with-launchd   # + KeepAlive plists for the fleet
+//   bun setup/llm-stack.ts --with-launchd   # + fleet plists + coordination plane
 //   bun setup/llm-stack.ts --dry-run        # print commands, run nothing
 //   bun setup/llm-stack.ts --skip-download  # deps only (models already present)
 
@@ -230,6 +230,70 @@ async function stepLaunchd(): Promise<void> {
   );
 }
 
+// ─── coordination plane: governor.db + claim/coord CLIs + keepwarm ───
+async function stepCoordination(): Promise<void> {
+  console.log(
+    "\n6) coordination plane (governor.db, claim/coord CLIs, keepwarm)",
+  );
+  const bun = "/opt/homebrew/bin/bun";
+  const govdb = join(HOME, ".claude", "hooks", "lib", "govdb.ts");
+  const coord = join(HOME, ".claude", "hooks", "bin", "coord.ts");
+  const tplSrc = join(
+    import.meta.dir,
+    "..",
+    "hooks",
+    "launchd",
+    "com.klh.llm-keepwarm.plist",
+  );
+  const plistPath = join(
+    HOME,
+    "Library",
+    "LaunchAgents",
+    "com.klh.llm-keepwarm.plist",
+  );
+  if (DRY) {
+    console.log(
+      "  → would bootstrap governor.db (claims/locks/events/cursors/facts)",
+    );
+    console.log(`  → would install + bootstrap ${plistPath}`);
+    return;
+  }
+  // 1) control-plane DB: creates schema, runs any JSON→SQL migrations
+  await sh([
+    bun,
+    "-e",
+    `import { openGovernorDb } from "${govdb}"; openGovernorDb(); console.log("  ✓ governor.db ready");`,
+  ]);
+  // 2) keepwarm agent: nonce pings keep MLX weights paged in (kills the
+  //    27-50s idle-page first-touch stall). Re-bootstrap of a loaded job is
+  //    expected to fail with exit 5 — tolerated.
+  const tpl = await Bun.file(tplSrc).text();
+  await Bun.write(plistPath, tpl.replaceAll("__HOME__", HOME));
+  const uid = process.getuid();
+  await sh(["/bin/launchctl", "bootstrap", `gui/${uid}`, plistPath]).catch(
+    () => {},
+  );
+  await sh([
+    "/bin/launchctl",
+    "kickstart",
+    `gui/${uid}/com.klh.llm-keepwarm`,
+  ]).catch(() => {});
+  // 3) smoke: one fact write through the real path
+  await sh([
+    bun,
+    coord,
+    "fact",
+    "set",
+    "setup.done",
+    new Date().toISOString(),
+    "--source",
+    "llm-stack",
+  ]).catch(() => {});
+  console.log(
+    `  ✓ coordination plane ready — claims: hooks/bin/claim.ts, bus: hooks/bin/coord.ts`,
+  );
+}
+
 // ─── run ───
 console.log("Local LLM fleet setup (docs/local-llm-fleet.md)");
 await stepDeps();
@@ -237,6 +301,7 @@ await stepTools();
 await stepModels();
 await stepMetalCheck();
 await stepLaunchd();
+await stepCoordination();
 console.log(
   "\n✓ done. Next: start the fleet (`rapid-mlx serve …` per model or via your",
 );

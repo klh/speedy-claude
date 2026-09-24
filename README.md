@@ -112,7 +112,11 @@ upgrade path if lanes ever go multi-machine). If finer control is ever needed,
 start with `ts-morph`-based symbol edits (`ts_edit`) before anything heavier.
 
 Unattended install of the coordination plane (claims/leases/event-bus CLIs +
-keepwarm agent):
+keepwarm agent): `bun setup/llm-stack.ts --with-launchd` installs the fleet
+**and** bootstraps `governor.db` + the keepwarm agent; the ready-to-copy
+binding protocol for a multi-agent repo lives in
+[docs/coordination-protocol.md](docs/coordination-protocol.md). Manual plist
+install:
 
 ```bash
 sed "s|__HOME__|$HOME|g" hooks/launchd/com.klh.llm-keepwarm.plist \
