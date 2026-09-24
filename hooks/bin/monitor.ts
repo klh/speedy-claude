@@ -18,8 +18,9 @@ const issues: string[] = [];
 const fixed: string[] = [];
 
 // 1. stale RUNNING sessions with dead transcripts (session sids ARE
-// transcript filenames — decidable)
-for (const s of db.query("SELECT sid, hb FROM sessions WHERE state = 'RUNNING' AND hb < ?").all(now - 20 * 60_000) as {
+// transcript filenames — decidable for TOP-LEVEL sessions only; lanes close
+// at 24h, their real liveness is backlog W9)
+for (const s of db.query("SELECT sid, hb FROM sessions WHERE state = 'RUNNING' AND parent_sid IS NULL AND hb < ?").all(now - 20 * 60_000) as {
 	sid: string; hb: number;
 }[]) {
 	let live = false;
@@ -77,9 +78,26 @@ for (const e of db.query("SELECT id, payload FROM events ORDER BY id DESC LIMIT 
 	}
 }
 
+// 6. FOCUS: workload surface per project — health-clean ≠ nothing to do
+const projs = db.query("SELECT DISTINCT project FROM work_items WHERE state NOT IN ('DONE','SUPERSEDED') ORDER BY project").all() as { project: string }[];
+for (const { project } of projs) {
+	const name = project.split("/").pop()?.replace(".git", "") || project;
+	const all = db.query("SELECT id, state, owner_sid, title FROM work_items WHERE project = ? AND state NOT IN ('DONE','SUPERSEDED') ORDER BY id").all(project) as {
+		id: string; state: string; owner_sid: string | null; title: string;
+	}[];
+	const inflight = all.filter((w) => w.state === "CLAIMED" || w.state === "RUNNING");
+	const ready = all.filter((w) => w.state === "READY");
+	console.log(
+		`FOCUS ${name}: ${inflight.length} in-flight, ${ready.length} ready/queued, ${all.length - inflight.length - ready.length} gated/other`,
+	);
+	for (const w of inflight) console.log(`  ▶ ${w.id} [${String(w.owner_sid).slice(0, 10)}] ${w.title.slice(0, 50)}`);
+	for (const w of ready.slice(0, 6)) console.log(`  · ${w.id} ${w.title.slice(0, 55)}`);
+	if (ready.length > 6) console.log(`  … +${ready.length - 6} more (work ready)`);
+}
+
 if (fixed.length) console.log(fixed.map((f) => `✓ ${f}`).join("\n"));
 if (issues.length) {
 	console.error(issues.map((i) => `⚠ ${i}`).join("\n"));
 	process.exit(1);
 }
-console.log("board clean");
+console.log("health clean");
