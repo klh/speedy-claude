@@ -91,9 +91,11 @@ architecture review): **isolate execution, serialize only integration.**
 | Layer | Mechanism |
 | ----- | --------- |
 | Execution isolation | One git worktree per lane — agents never share a mutable filesystem |
-| Write arbitration | Governor edit-leases: first-touch per file, content-hash versioning (external-write detector), atomic registry writes, deny-path fresh-reload |
-| Area claims | SQLite registry (`governor.db`, WAL) driven by a terse claim CLI — coarse scopes (`src/auth`) with `intent`; cross-area touches are **drift-logged** (soft) or **denied** (only hot areas); claims validated against live session transcripts (fabricated ids refused) |
+| Write arbitration | Governor edit-leases (`locks` table): first-touch per file, content-hash versioning (external-write detector), single-statement reads/writes — WAL arbitrates concurrent gate processes, no lost-update window |
+| Area claims | `claims` table driven by a terse claim CLI — coarse scopes (`src/auth`) with `intent`; cross-area touches are **drift-logged** (soft) or **denied** (only hot areas); claims validated against live session transcripts (fabricated ids refused) |
+| Event bus | `coord emit / poll / wait / fact` — agents share state **by reference** (structured events, per-agent cursors, versioned facts), never by retelling prose; `wait` is an adaptive long-poll (250ms → 2s backoff, instant wake on events). SendMessage stays reserved for interrupts |
 | Liveness | Leases expire when quiet 15 min **and** the owner's transcript is dead — a lane in one long tool call never loses its lease mid-work; claim heartbeats are single-statement UPDATEs on the same DB |
+| Keepwarm | `llm-keepwarm.ts` + launchd every 4 min: a 1-token **nonce** ping per resident specialist (a cache HIT would skip the forward pass and leave weights paged out) — kills the 27–50s idle-paging first-touch stall |
 | Early conflict warning | `git merge-tree --write-tree <head> <lane>` — pure three-way merge simulation, no working-tree mutation, run between overlapping lanes' checkpoints |
 | Integration spine | One integration worktree; lane commits merge onto the integration HEAD, **qlty runs on the merged state**, green advances HEAD |
 | Repair | Conflicts go to a small repair agent in a disposable worktree — never wake both origin lanes |
@@ -102,8 +104,18 @@ architecture review): **isolate execution, serialize only integration.**
 The one rule that matters most: **a lane being green is not sufficient — the
 lane merged onto the current integration HEAD must be green.** Deliberately
 NOT built (over-engineering at local scale): semantic MVCC, symbol-version
-ownership, AST merge, distributed lock managers. If those are ever needed,
+ownership, AST merge, distributed lock managers, a message broker (NATS is the
+upgrade path if lanes ever go multi-machine). If finer control is ever needed,
 start with `ts-morph`-based symbol edits (`ts_edit`) before anything heavier.
+
+Unattended install of the coordination plane (claims/leases/event-bus CLIs +
+keepwarm agent):
+
+```bash
+sed "s|__HOME__|$HOME|g" hooks/launchd/com.klh.llm-keepwarm.plist \
+  > ~/Library/LaunchAgents/com.klh.llm-keepwarm.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.klh.llm-keepwarm.plist
+```
 
 ## Autonomy settings
 
