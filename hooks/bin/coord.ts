@@ -438,13 +438,14 @@ if (cmd === "emit") {
 	let question: string;
 	if (rest.includes("--best")) {
 		question = pos.join(" ");
-		const best = rankExperts(projectIdentity(), question, scope)[0];
+		const best = rankExperts(projectIdentity(), question, scope, as)[0];
 		if (!best) die("no ranked expert — nobody live has touched this");
 		expert = best.sid;
 	} else {
 		expert = pos[0] ?? null;
 		question = pos.slice(1).join(" ");
 	}
+	if (!as) die("consult requires --as <asker-sid>");
 	if (!expert || !question) die('usage: consult [--best] "<question>" | consult <sid> "<question>" [--scope s] --as <asker>');
 	if (!db.query("SELECT 1 FROM sessions WHERE sid = ? AND project = ? AND state = 'RUNNING'").get(expert, projectIdentity())) die(`${expert.slice(0, 8)} is not a live session in this project`);
 	const r = db.query("INSERT INTO consults (project, asker_sid, expert_sid, question, scope, state, created_at) VALUES (?, ?, ?, ?, ?, 'OPEN', ?)").run(projectIdentity(), as, expert, question, scope, Date.now());
@@ -467,7 +468,7 @@ if (cmd === "emit") {
 	const cid = pos[0];
 	const text = pos.slice(1).join(" ");
 	if (!cid || (!text && !decline) || !as) die('usage: consult-reply <C##> "<answer>" [--decline] --as <expert-sid>');
-	const c = db.query("SELECT * FROM consults WHERE id = ?").get(Number(String(cid).replace(/^C/i, ""))) as { id: number; asker_sid: string; expert_sid: string; state: string } | undefined;
+	const c = db.query("SELECT * FROM consults WHERE id = ? AND project = ?").get(Number(String(cid).replace(/^C/i, "")), projectIdentity()) as { id: number; asker_sid: string; expert_sid: string; state: string } | undefined;
 	if (!c) die(`no such consult: ${cid}`);
 	if (c.expert_sid !== as) die(`${cid} is addressed to ${String(c.expert_sid).slice(0, 8)}, not you`);
 	if (c.state !== "OPEN") die(`${cid} is ${c.state}`);
@@ -484,8 +485,8 @@ if (cmd === "emit") {
 		rows
 			.map((r) => {
 				const cid = `C${r.id}`;
-				if (r.state === "OPEN") return `${red("?")} ${cyan(cid)} ${dim(`from ${String(r.asker_sid).slice(0, 8)}`)} ${r.question.slice(0, 60)}`;
-				return `${green("✓")} ${cyan(cid)} ${dim(r.state)} ${String(r.answer ?? "").slice(0, 60)}`;
+				if (r.state === "OPEN") return `${red("?")} ${cyan(cid)} ← ${dim(`from ${String(r.asker_sid).slice(0, 8)}`)} ${r.question.slice(0, 60)}`;
+				return `${green("✓")} ${cyan(cid)} → ${dim(`asked ${String(r.asker_sid).slice(0, 8)}`)} ${String(r.answer ?? "").slice(0, 60)}`;
 			})
 			.join("\n") || dim("(no consults)"),
 	);
@@ -520,7 +521,7 @@ if (cmd === "emit") {
 	const c = db.query("DELETE FROM cursors WHERE sid NOT IN (SELECT sid FROM sessions)").run().changes;
 	const f = db.query("DELETE FROM facts WHERE key LIKE 'lane.%' AND ts < ?").run(cut).changes;
 	// consults: open questions expire after 1h; closed threads age out
-	const x = db.query("UPDATE consults SET state = 'EXPIRED' WHERE state = 'OPEN' AND created_at < ?").run(Date.now() - 3_600_000).changes;
+	const x = db.query("UPDATE consults SET state = 'EXPIRED', answered_at = ? WHERE state = 'OPEN' AND created_at < ?").run(Date.now(), Date.now() - 3_600_000).changes;
 	const cd = db.query("DELETE FROM consults WHERE state IN ('ANSWERED','DECLINED','EXPIRED') AND answered_at < ? AND answered_at IS NOT NULL").run(cut).changes;
 	console.log(`gc: ${e} events, ${s} closed sessions, ${c} stale cursors, ${f} lane facts, ${x} consults expired, ${cd} consult threads pruned (>${days}d; work ledger untouched)`);
 } else {
@@ -537,13 +538,14 @@ function scopeCovers(a: string, b: string): boolean {
 // contextual expertise ranking for who-knows / consult --best. Score =
 // claims 40% / recent DONE work 25% / recent scope touches 20% / role 10% /
 // heartbeat recency 5%. Only live sessions in the project.
-function rankExperts(project: string, q: string, scope: string | null): { sid: string; score: number; hint: string }[] {
+function rankExperts(project: string, q: string, scope: string | null, excludeSid?: string): { sid: string; score: number; hint: string }[] {
 	const toks = [...new Set([...(scope ?? "").split(/[^a-z0-9_.]+/), ...q.toLowerCase().split(/[^a-z0-9_.]+/)].filter((t) => t.length > 2))];
 	const now = Date.now();
 	const live = db.query("SELECT sid, role, hb FROM sessions WHERE project = ? AND state = 'RUNNING'").all(project) as { sid: string; role: string; hb: number }[];
 	const hits = (hay: string): number => toks.reduce((n, t) => n + (hay.toLowerCase().includes(t) ? 1 : 0), 0);
 	const rows: { sid: string; score: number; hint: string }[] = [];
 	for (const s of live) {
+		if (excludeSid && s.sid === excludeSid) continue;
 		const claims = db.query("SELECT scope, intent FROM claims WHERE sid = ?").all(s.sid) as { scope: string; intent: string | null }[];
 		let claimN = 0;
 		let hint = "";
