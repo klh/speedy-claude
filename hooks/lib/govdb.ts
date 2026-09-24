@@ -20,17 +20,45 @@ export function openGovernorDb(): Database {
 		if (mode?.toLowerCase() !== "wal") throw new Error(`governor.db WAL unavailable (got: ${mode ?? "unknown"})`);
 	}
 	db.run("PRAGMA synchronous=NORMAL");
+	db.run("PRAGMA foreign_keys=ON"); // composite FKs guard work_deps against cross-project/orphan edges
 	db.run(
 		"CREATE TABLE IF NOT EXISTS claims (sid TEXT NOT NULL, scope TEXT NOT NULL, intent TEXT, hot INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL, tp TEXT, PRIMARY KEY (sid, scope))",
 	);
 	db.run(
 		"CREATE TABLE IF NOT EXISTS locks (path TEXT PRIMARY KEY, sid TEXT NOT NULL, tool TEXT, ts INTEGER NOT NULL, tp TEXT, hash TEXT, seen TEXT)",
 	);
-	// event bus (coord.ts): append-only events, per-agent cursors, canonical facts
+	// event bus (coord.ts): append-only events, per-agent cursors, canonical facts.
+	// target = directed inbox (null = broadcast); added by migration on older DBs.
 	db.run(
-		"CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, source TEXT NOT NULL, kind TEXT NOT NULL, scope TEXT, payload TEXT)",
+		"CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, source TEXT NOT NULL, kind TEXT NOT NULL, scope TEXT, payload TEXT, target TEXT)",
 	);
+	const evCols = (db.query("PRAGMA table_info(events)").all() as { name: string }[]).map((c) => c.name);
+	if (!evCols.includes("target")) db.run("ALTER TABLE events ADD COLUMN target TEXT");
 	db.run("CREATE TABLE IF NOT EXISTS cursors (sid TEXT PRIMARY KEY, event_id INTEGER NOT NULL)");
+	// work graph: hierarchical, claimable, shatterable work items (bin/work.ts).
+	// project = repo root realpath — partitions the graph per project so
+	// sessions in different repos never see (or steal) each other's work.
+	// CREATE TABLE IF NOT EXISTS cannot upgrade a live table, so pre-partitioned
+	// (single-PK) tables are dropped once — safe while the graph has no
+	// production rows.
+	const staleWork = (name: string): boolean => {
+		const row = db.query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?").get(name) as
+			| { sql?: string }
+			| undefined;
+		return !!row?.sql && !/PRIMARY KEY\s*\(\s*project/.test(row.sql);
+	};
+	if (staleWork("work_deps")) db.run("DROP TABLE work_deps");
+	if (staleWork("work_items")) db.run("DROP TABLE work_items");
+	db.run(
+		"CREATE TABLE IF NOT EXISTS work_items (project TEXT NOT NULL, id TEXT NOT NULL, parent_id TEXT, title TEXT NOT NULL, description TEXT, state TEXT NOT NULL DEFAULT 'READY', priority INTEGER NOT NULL DEFAULT 0, owner_sid TEXT, created_by TEXT, scope TEXT, why_parallel TEXT, result_sha TEXT, required INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (project, id))",
+	);
+	db.run(
+		"CREATE TABLE IF NOT EXISTS work_deps (project TEXT NOT NULL, work_id TEXT NOT NULL, depends_on TEXT NOT NULL, PRIMARY KEY (project, work_id, depends_on), FOREIGN KEY (project, work_id) REFERENCES work_items(project, id) ON DELETE CASCADE, FOREIGN KEY (project, depends_on) REFERENCES work_items(project, id) ON DELETE CASCADE)",
+	);
+	// session registry (coord bootstrap): who exists, where, doing what role
+	db.run(
+		"CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, project TEXT, role TEXT, parent_sid TEXT, worktree TEXT, started_at INTEGER NOT NULL, hb INTEGER NOT NULL, state TEXT NOT NULL DEFAULT 'RUNNING')",
+	);
 	db.run(
 		"CREATE TABLE IF NOT EXISTS facts (key TEXT PRIMARY KEY, value TEXT, source TEXT, version INTEGER NOT NULL DEFAULT 1, ts INTEGER NOT NULL)",
 	);
