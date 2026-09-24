@@ -83,6 +83,28 @@ after the lease hash was taken and every save risks a false deny.
 
 Register via `settings.example.json`.
 
+## Multi-agent coordination — the converged architecture
+
+For N coding lanes on one machine (learned from a 9-lane session + a fleet-wide
+architecture review): **isolate execution, serialize only integration.**
+
+| Layer | Mechanism |
+| ----- | --------- |
+| Execution isolation | One git worktree per lane — agents never share a mutable filesystem |
+| Write arbitration | Governor edit-leases: first-touch per file, content-hash versioning (external-write detector), atomic registry writes, deny-path fresh-reload |
+| Area claims | Coordinator-owned `claims.json` — coarse scopes (`src/auth/**`) with `intent`; cross-area touches are **drift-logged** (soft) or **denied** (only coordinator-marked hot areas) |
+| Liveness | Leases expire when quiet 15 min **and** the owner's transcript is dead — a lane in one long tool call never loses its lease mid-work |
+| Early conflict warning | `git merge-tree --write-tree <head> <lane>` — pure three-way merge simulation, no working-tree mutation, run between overlapping lanes' checkpoints |
+| Integration spine | One integration worktree; lane commits merge onto the integration HEAD, **qlty runs on the merged state**, green advances HEAD |
+| Repair | Conflicts go to a small repair agent in a disposable worktree — never wake both origin lanes |
+| Lane output | Checkpoint commits every 10–20 min; lanes report `{base SHA, commit SHA, changed paths, test status}` — the coordinator operates on immutable commits, never working dirs |
+
+The one rule that matters most: **a lane being green is not sufficient — the
+lane merged onto the current integration HEAD must be green.** Deliberately
+NOT built (over-engineering at local scale): semantic MVCC, symbol-version
+ownership, AST merge, distributed lock managers. If those are ever needed,
+start with `ts-morph`-based symbol edits (`ts_edit`) before anything heavier.
+
 ## Autonomy settings
 
 `settings.example.json` is a ready template: GLM/z.ai (or any Anthropic-compatible) env vars, `acceptEdits`, an evidence-based allowlist (fast CLI tools + `npm test`/`dotnet test`/`git fetch`/`npx tsc --noEmit`), and deny guardrails (`sudo rm`, force-push, `rm -rf ~/*`). Copy to `~/.claude/settings.json`, fill the token, adjust to your stack.
