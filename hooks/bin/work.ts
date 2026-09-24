@@ -38,7 +38,7 @@ const arg = (name: string): string | null => {
 };
 
 // --help anywhere wins before any parsing that could create state
-if (!cmd || rest.includes("--help") || rest.includes("-h")) {
+if (!cmd || cmd === "--help" || cmd === "-h" || rest.includes("--help") || rest.includes("-h")) {
 	if (cmd) {
 		console.log("work — hierarchical shatterable work graph. add | list | ready | mine | owned | show | take | release | start | done | fail | supersede | split | block | unblock | orphaned | reclaim");
 		process.exit(0);
@@ -57,7 +57,7 @@ const pos = (): string[] => {
 			i++;
 			continue;
 		}
-		if (rest[i].startsWith("--")) continue;
+		if (rest[i].startsWith("--")) die(`unknown option: ${rest[i]}`);
 		out.push(rest[i]);
 	}
 	return out;
@@ -211,7 +211,7 @@ function liveTranscript(sid: string): string | null {
 }
 
 if (cmd === "add") {
-	const title = rest[0];
+	const title = pos()[0];
 	if (!title) die('usage: add <title> [--scope s] [--parent <id>] [--priority n] [--desc "..."] [--by sid]');
 	const parent = arg("--parent");
 	const scope = arg("--scope");
@@ -242,7 +242,7 @@ if (cmd === "add") {
 	const rows = db.query("SELECT * FROM work_items WHERE project = ? AND owner_sid IS NOT NULL AND state NOT IN ('DONE','SUPERSEDED') ORDER BY owner_sid, id").all(PROJECT) as Item[];
 	console.log(rows.map(renderRow).join("\n") || dim("(nothing owned)"));
 } else if (cmd === "show") {
-	const id = rest[0];
+	const id = pos()[0];
 	const it = get(id ?? "");
 	const [g, col] = GLYPH[it.state as string] ?? ["?", dim];
 	console.log(`${col(g)} ${it.id} ${col(it.state as string)}  ${it.title}`);
@@ -257,7 +257,7 @@ if (cmd === "add") {
 	const d = deps(id ?? "");
 	if (d.length) console.log(dim(`  depends on: ${d.map((x) => `${x.depends_on}(${x.state ?? "?"})`).join(", ")}`));
 } else if (cmd === "take") {
-	const id = rest[0];
+	const id = pos()[0];
 	const as = arg("--as");
 	if (!id || !as) die("usage: take <id> --as <sid>");
 	const it = get(id);
@@ -269,19 +269,19 @@ if (cmd === "add") {
 	emit("work.claimed", id, { by: as });
 	console.log(`${green("✓")} ${cyan(id)} claimed by ${dim(as.slice(0, 8))}`);
 } else if (cmd === "release") {
-	const id = rest[0];
+	const id = pos()[0];
 	if (!id) die("usage: release <id> [--as sid]");
 	const it = get(id);
 	setState(id, "READY", null);
 	releaseClaim((it.owner_sid as string) ?? "", it.scope as string | null);
 	console.log(`${cyan("·")} ${dim(`${id} → READY`)}`);
 } else if (cmd === "start") {
-	const id = rest[0];
+	const id = pos()[0];
 	get(id ?? "");
 	setState(id, "RUNNING");
 	console.log(`${green("▶")} ${id}`);
 } else if (cmd === "done") {
-	const id = rest[0];
+	const id = pos()[0];
 	const sha = arg("--sha");
 	if (!id) die("usage: done <id> --sha <sha>");
 	const it = get(id);
@@ -296,21 +296,21 @@ if (cmd === "add") {
 	if (p) rollUp(p as string);
 	console.log(`${green("✓")} ${cyan(id)} DONE${sha ? ` @${sha.slice(0, 8)}` : ""}`);
 } else if (cmd === "fail") {
-	const id = rest[0];
+	const id = pos()[0];
 	const note = arg("--note") ?? "";
 	get(id ?? "");
 	setState(id, "FAILED");
 	emit("work.failed", id, { note });
 	console.log(`${red("✗")} ${id} FAILED${note ? dim(` — ${note}`) : ""}`);
 } else if (cmd === "supersede") {
-	const id = rest[0];
+	const id = pos()[0];
 	const byId = arg("--by");
 	if (!id || !byId) die("usage: supersede <id> --by <new-id>");
 	get(id);
 	setState(id, "SUPERSEDED", null, byId);
 	console.log(`${dim("■")} ${id} superseded by ${byId}`);
 } else if (cmd === "block") {
-	const id = rest[0];
+	const id = pos()[0];
 	const on = arg("--on");
 	if (!id || !on) die("usage: block <id> --on <other-id>");
 	get(on ?? "");
@@ -318,7 +318,7 @@ if (cmd === "add") {
 	db.query("INSERT OR REPLACE INTO work_deps (project, work_id, depends_on) VALUES (?, ?, ?)").run(PROJECT, id, on);
 	console.log(`${red("⚠")} ${id} blocked on ${on}`);
 } else if (cmd === "unblock") {
-	const id = rest[0];
+	const id = pos()[0];
 	const on = arg("--on");
 	if (!id || !on) die("usage: unblock <id> --on <id2>");
 	db.query("DELETE FROM work_deps WHERE project = ? AND work_id = ? AND depends_on = ?").run(PROJECT, id, on);
@@ -327,7 +327,7 @@ if (cmd === "add") {
 	// atomic shatter: parent → SHATTERED, children → READY; the splitter may
 	// keep one child (--keep N, 1-based). Requires why_parallel so splits
 	// answer "why is this parallel work at all".
-	const id = rest[0];
+	const id = pos()[0];
 	const knownVals = new Set(["--reason", "--keep"]);
 	const titles: string[] = [];
 	for (let i = 1; i < rest.length; i++) {
@@ -335,7 +335,7 @@ if (cmd === "add") {
 			i++;
 			continue;
 		}
-		if (rest[i].startsWith("--")) continue;
+		if (rest[i].startsWith("--")) die(`unknown option: ${rest[i]}`);
 		titles.push(rest[i]);
 	}
 	const reason = arg("--reason");
@@ -364,7 +364,7 @@ if (cmd === "add") {
 	const out = rows.filter((r) => !liveTranscript(String(r.owner_sid)));
 	console.log(out.length ? out.map(renderRow).join("\n") : dim("(no orphans)"));
 } else if (cmd === "reclaim") {
-	const id = rest[0];
+	const id = pos()[0];
 	const it = get(id ?? "");
 	if (!["CLAIMED", "RUNNING", "ORPHANED"].includes(it.state as string)) die(`${id} is ${it.state} — only CLAIMED/RUNNING/ORPHANED can be reclaimed`);
 	setState(id, "READY", null);

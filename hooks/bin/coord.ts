@@ -416,7 +416,7 @@ if (cmd === "emit") {
 			i++;
 			continue;
 		}
-		if (rest[i].startsWith("--")) continue;
+		if (rest[i].startsWith("--")) die(`unknown option: ${rest[i]}`);
 		pos.push(rest[i]);
 	}
 	const q = pos.join(" ");
@@ -429,14 +429,14 @@ if (cmd === "emit") {
 	// native @session messaging with who-knows for discovery.
 	const as = arg("--as");
 	const scope = arg("--scope");
-	const known = new Set(["--as", "--scope"]);
+	const known = new Set(["--as", "--scope", "--best"]);
 	const pos: string[] = [];
 	for (let i = 0; i < rest.length; i++) {
 		if (known.has(rest[i])) {
 			i++;
 			continue;
 		}
-		if (rest[i].startsWith("--")) continue;
+		if (rest[i].startsWith("--")) die(`unknown option: ${rest[i]}`);
 		pos.push(rest[i]);
 	}
 	let expert: string | null = null;
@@ -459,14 +459,14 @@ if (cmd === "emit") {
 	console.log(`CONSULT ${cyan(cid)} ${dim("→")} ${expert.slice(0, 8)}`);
 } else if (cmd === "consult-reply") {
 	const as = arg("--as");
-	const known = new Set(["--as"]);
+	const known = new Set(["--as", "--decline"]);
 	const pos: string[] = [];
 	for (let i = 0; i < rest.length; i++) {
 		if (known.has(rest[i])) {
 			i++;
 			continue;
 		}
-		if (rest[i].startsWith("--")) continue;
+		if (rest[i].startsWith("--")) die(`unknown option: ${rest[i]}`);
 		pos.push(rest[i]);
 	}
 	const decline = rest.includes("--decline");
