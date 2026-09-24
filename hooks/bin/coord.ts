@@ -547,14 +547,20 @@ function scopeCovers(a: string, b: string): boolean {
 // liveness sweep: RUNNING + heartbeat stale + NO live transcript = a process
 // that died without SessionEnd. hb alone is not evidence — it only updates on
 // bootstrap — but an active session writes its transcript continuously, so
-// transcript-dead is the real signal. Swept sessions keep owned work: the
-// next SessionStart(resume) rebinds it or `work orphaned` surfaces it.
+// transcript-dead is the real signal for TOP-LEVEL sessions. LANES (parented
+// rows) have no transcript of their own, so they close only after 24h stale —
+// their real liveness design is backlog W9. Swept sessions keep owned work.
 function sweepStaleSessions(maxIdleMs = 20 * 60_000): number {
-	const cut = Date.now() - maxIdleMs;
-	const rows = db.query("SELECT sid FROM sessions WHERE state = 'RUNNING' AND hb < ?").all(cut) as { sid: string }[];
+	const now = Date.now();
 	let n = 0;
+	const rows = db.query("SELECT sid FROM sessions WHERE state = 'RUNNING' AND parent_sid IS NULL AND hb < ?").all(now - maxIdleMs) as { sid: string }[];
 	for (const r of rows) {
 		if (liveTranscript(r.sid)) continue;
+		db.query("UPDATE sessions SET state = 'CLOSED' WHERE sid = ? AND state = 'RUNNING'").run(r.sid);
+		n++;
+	}
+	const lanes = db.query("SELECT sid FROM sessions WHERE state = 'RUNNING' AND parent_sid IS NOT NULL AND hb < ?").all(now - 24 * 3_600_000) as { sid: string }[];
+	for (const r of lanes) {
 		db.query("UPDATE sessions SET state = 'CLOSED' WHERE sid = ? AND state = 'RUNNING'").run(r.sid);
 		n++;
 	}
