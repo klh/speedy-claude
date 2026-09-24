@@ -53,15 +53,18 @@ const db: Database = openGovernorDb();
 
 // Runtime-side validation: a claim target must be a REAL live session —
 // fabricated ids are rejected here, not discovered by the governor later.
+// Layout-agnostic: main sessions live at <proj>/<sid>.jsonl, subagents at
+// <proj>/<parent-session>/subagents/agent-<id>.jsonl — a glob over both
+// beats hardcoding the harness's directory shape.
 function liveTranscript(sid: string): string | null {
 	const floor = Date.now() - TTL;
 	try {
-		for (const proj of readdirSync(PROJECTS)) {
-			for (const f of [`${PROJECTS}/${proj}/${sid}.jsonl`, `${PROJECTS}/${proj}/subagents/${sid}.jsonl`]) {
-				try {
-					if (existsSync(f) && statSync(f).mtimeMs > floor) return f;
-				} catch {}
-			}
+		const glob = new Bun.Glob(`**/*${sid}*.jsonl`);
+		for (const rel of glob.scanSync({ cwd: PROJECTS, onlyFiles: true })) {
+			const f = `${PROJECTS}/${rel}`;
+			try {
+				if (existsSync(f) && statSync(f).mtimeMs > floor) return f;
+			} catch {}
 		}
 	} catch {}
 	return null;

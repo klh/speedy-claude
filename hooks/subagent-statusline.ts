@@ -5,6 +5,7 @@
 // Contract: row context JSON on stdin → { id, content } on stdout.
 // Fail-open: any error exits silently and the harness renders its default row.
 import { Database } from "bun:sqlite";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 type Row = {
 	id?: string;
@@ -32,9 +33,26 @@ try {
 
 	try {
 		const db = new Database(`${process.env.HOME}/.cache/claude-governor/governor.db`);
-		const st = db.query("SELECT value FROM facts WHERE key = ?").get(`lane.${sid}.state`) as { value: string } | null;
-		const claimed = db.query("SELECT COUNT(*) AS n FROM claims WHERE sid = ?").get(sid) as { n: number };
-		const cap = db.query("SELECT value FROM facts WHERE key = ?").get(`lane.${sid}.capsule`) as { value: string } | null;
+		// layout-agnostic lane matching: a row may carry the sid under any key,
+		// so match against the RAW row text over known lane ids
+		const laneSids = [
+			...(db.query("SELECT DISTINCT sid FROM claims").all() as { sid: string }[]),
+			...(db.query("SELECT key FROM facts WHERE key LIKE 'lane.%.state'").all() as { key: string }[]).map((k) =>
+				k.key.replace(/^lane\./, "").replace(/\.state$/, ""),
+			),
+		];
+		const raw = JSON.stringify(row);
+		const laneSid = laneSids.find((s) => s && raw.includes(s));
+		const st = laneSid ? (db.query("SELECT value FROM facts WHERE key = ?").get(`lane.${laneSid}.state`) as { value: string } | null) : null;
+		const claimed = laneSid ? 1 : 0;
+		const cap = laneSid ? (db.query("SELECT value FROM facts WHERE key = ?").get(`lane.${laneSid}.capsule`) as { value: string } | null) : null;
+		// payload capture (capped) — lets us fix key mappings against reality
+		try {
+			const log = "/tmp/subagent-rows.jsonl";
+			const prev = existsSync(log) ? readFileSync(log, "utf8").split("\n").slice(-200) : [];
+			prev.push(JSON.stringify(row));
+			writeFileSync(log, prev.filter(Boolean).join("\n") + "\n");
+		} catch {}
 		db.close();
 		const glyph: Record<string, [string, (s: string) => string]> = {
 			PAUSE_REQUESTED: ["⏸", amber],

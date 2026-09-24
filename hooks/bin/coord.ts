@@ -48,6 +48,7 @@ const dim = paint("2");
 const cyan = paint("36");
 const green = paint("32");
 const amber = paint("33");
+const red = paint("31");
 
 if (cmd === "emit") {
 	const kind = rest[0];
@@ -322,8 +323,22 @@ if (cmd === "emit") {
 		}[];
 		console.log(rows.length ? rows.map((r) => `${r.key} = ${r.value}  (v${r.version})`).join("\n") : "(no facts)");
 	} else die("usage: fact set <key> <value> | fact get <key> | fact list");
+} else if (cmd === "fleet") {
+	// one-line fleet projection for a terminal pane (the Desktop panel
+	// projection lives in subagent-statusline.ts; the CLI inline rows are
+	// harness-owned and ignore it)
+	const lanes = db.query("SELECT DISTINCT sid FROM claims ORDER BY sid").all() as { sid: string }[];
+	const states = db.query("SELECT key, value FROM facts WHERE key LIKE 'lane.%.state'").all() as { key: string; value: string }[];
+	const byKey = new Map(states.map((s) => [s.key, s.value]));
+	const head = (db.query("SELECT value FROM facts WHERE key = 'integration.head'").get() as { value: string } | null)?.value;
+	const parts = lanes.map((l) => {
+		const st = byKey.get(`lane.${l.sid}.state`);
+		const g = st === "PAUSED" || st === "PAUSE_REQUESTED" ? amber("⏸") : st === "RESUME_READY" ? cyan("↻") : st === "BLOCKED" ? red("⚠") : green("▶");
+		return `${g} ${dim(l.sid.slice(0, 8))}`;
+	});
+	console.log(`${head ? `${dim(`@${head.slice(0, 7)}`)}  ` : ""}${parts.join("  ") || dim("(no claimed lanes)")}`);
 } else {
-	die("unknown command — try emit | poll | fact");
+	die("unknown command — try emit | poll | wait | fact | fleet");
 }
 
 function scopeCovers(a: string, b: string): boolean {
