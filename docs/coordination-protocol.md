@@ -21,8 +21,9 @@ EXIT    blocked/ok (reason)   ← only when it changed
 Never print: unchanged fleet state, step-by-step narration, full diffs,
 passing test details (`GATE: PASS` suffices — expand only on FAIL), repeated
 exit reasons, "no drift"/"no new defects" silence-confirmations, tool
-narration. The control plane already knows the details — query it, don't
-narrate it:
+narration. **Cycle output is 3–6 lines max, changed fields only; expand only
+on ERROR/BLOCKED/DECISION.** The control plane already knows the details —
+query it, don't narrate it:
 
 ```bash
 bun ~/.claude/bin/coord.ts fact set integration.head <sha> --source coordinator
@@ -68,6 +69,20 @@ to facts/logs, not the report.
   `coord fact` — launch a repair agent only on FAIL
 - Conflicts → repair agent in a disposable worktree; never wake both origin
   lanes
+
+### Cooperative preemption (pause / reroute / resume)
+```bash
+coord pause <sid> --reason "incoming contract change" --scope src/auth --intervention "LiveController API rewrite"
+# lane hits a safe boundary → checkpoints, writes its capsule, then waits:
+coord capsule set --as <sid> --task=live4 --checkpoint=91ab72c --base=f30b910 --step="rewiring host" --next="MediaMonitor bindings" --assumptions="applyPreview unchanged"
+# in-band change lands, then:
+coord resume <sid> --onto <new-head> --note "applyPreview: (x) → (x, ctx); MediaMonitor → factory"
+```
+- `coord state --as <sid>` between tool rounds: run/PAUSED + inbox count + integration HEAD. PAUSE_REQUESTED goes out the moment the coordinator knows a collision is coming — the lane checkpoints early instead of working past the intervention.
+- Continuation capsule (facts `lane.<sid>.capsule`): task, checkpoint, base, step, next, assumptions — the minimum restart packet; also survives session compaction.
+- Claims while paused default to SOFT (other lanes may drift in, drift-logged); hot-mark the scope only if the intervention must exclude everyone.
+- PAUSE intends to continue this exact lane (capsule kept); STOP supersedes it (commits/facts remain, capsule dropped).
+- resume_ready carries the delta summary — the lane updates its worktree onto the new integration HEAD, reruns targeted tests, continues. Reconciliation conflict → repair path.
 
 ### Claims
 - Every lane registers via `claim add <sid> <scope...> --intent "..."` at
