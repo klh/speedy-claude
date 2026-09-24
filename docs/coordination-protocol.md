@@ -92,6 +92,7 @@ coord resume <sid> --onto <new-head> --note "applyPreview: (x) → (x, ctx); Med
 - Register active/blocked/queued work: `work add <title> --scope <scope> --by <sid>` — the graph is partitioned per project (repo root)
 - Take before implementing: `work take <id> --as <sid>` (CAS; a lost race is informational — pick another)
 - Parallelizable? `work split <id> "t1" "t2" ... --reason independent-scopes --keep 1` — splitter keeps one child; idle lanes take from `work ready`
+- Plan before fan-out: decomposition-class splits are plan-gated — one planner registers the plan as a graph item first (per-concern children, each child's EXCLUSIVE file/module regions, interface contracts, integration order), child lanes `work block <child> --on <plan-id>` until the plan lands. Rationale: coupling (shared state/imports) discovered once by a planner beats N lanes discovering it independently; exclusive regions prevent merge wars. Splitting a never-claimed (unsurveyed) item is a drive-by fan-out — don't.
 - Progress: `work done <id> --sha <sha>` — SHATTERED parents roll up automatically; scope claim auto-releases
 - Ownership: `work mine --as <sid>` / `work owned` · stale owner: `work orphaned` → inspect capsule → `work reclaim <id>`
 - Restart: `claude -c` auto-rebinds ownership on SessionStart (resume); verify with `coord doctor-session <sid>` - no live state may point at a closed predecessor
