@@ -85,6 +85,8 @@ coord resume <sid> --onto <new-head> --note "applyPreview: (x) → (x, ctx); Med
 - PAUSE intends to continue this exact lane (capsule kept); STOP supersedes it (commits/facts remain, capsule dropped).
 - resume_ready carries the delta summary — the lane updates its worktree onto the new integration HEAD, reruns targeted tests, continues. Reconciliation conflict → repair path.
 
+- **Spawn ritual: `coord bootstrap --as <lane-sid> --role worker` for EVERY lane at spawn** - lanes need session identity (full sid, never a display truncation) so liveness sweep / orphaned / doctor-session can see them; use the SAME sid for claims and `work take`.
+
 ### Work Graph (operational state lives here — never in Markdown)
 - Session start: `coord bootstrap --as <sid> --role coordinator|worker` → identity + OWNED + READY pool + inbox + head
 - Register active/blocked/queued work: `work add <title> --scope <scope> --by <sid>` — the graph is partitioned per project (repo root)
