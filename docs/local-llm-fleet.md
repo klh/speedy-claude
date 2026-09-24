@@ -43,18 +43,24 @@ Change a model in one place, everything follows.
 | 8901 | Qwen3-Coder-30B-A3B-Instruct-4bit | code (MoE, 3B active)      | ~16GB  | rapid  |
 | 8902 | Qwen3-4B-Instruct-2507-4bit       | extract/simple             | ~2GB   | rapid  |
 | 8903 | Qwen3.5-35B-A3B-4bit              | reason/architecture        | ~20GB  | rapid  |
-| 8904 | Qwen3-Embedding-0.6B-4bit-DWQ     | embed                      | ~0.3GB | mlx_lm |
-| 8905 | Qwen3-Reranker-0.6B-4bit          | rerank                     | ~0.3GB | mlx_lm |
 | 8906 | Qwen3.5-9B-4bit                   | danish/general (on demand) | ~5.6GB | rapid  |
 | 8912 | Kev-4B decision model             | classifier leg             | ~8GB   | kev    |
+| 8913 | Qwen3-Reranker-0.6B-4bit          | rerank (prompt protocol)   | ~0.4GB | rapid  |
+
+Gotcha found live: rapid-mlx 0.15.x serves `/v1/embeddings` but has **no
+`/v1/rerank`**. The 0.6B reranker still works — Qwen3-Reranker's native
+protocol is a yes/no relevance prompt over `/v1/chat/completions` — but a
+server that loads the model is not the same as a server that serves the
+route. Probe before documenting.
 
 Model-swap discipline: every swap lives behind one registry line, and the
 rollback is reverting that line. Bench before and after with the same battery.
 
-Rerank is a deliberate gap, not an accidental one: the 0.6B reranker server was
-retired when mlx_lm 0.31.x dropped the `/v1/rerank` route (embeddings stayed on
-a dedicated on-demand server). If RAG relevance work needs it again, add a
-dedicated embed/rerank server package — don't assume mlx_lm serves it.
+Rerank status: the gap from the mlx_lm 0.31.x retirement is **closed** —
+Qwen3-Reranker-0.6B is back as a resident specialist on :8913 (rapid 0.15.x),
+consumed via the chat/completions prompt protocol. Embeddings: rapid 0.15.x
+serves `/v1/embeddings` natively again, so the on-demand embed server pattern
+may be replaceable by the fleet itself — probe before migrating.
 
 ## Routing: regex pre-filter, then a small classifier for the ambiguity band
 

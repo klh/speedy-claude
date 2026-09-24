@@ -92,8 +92,8 @@ architecture review): **isolate execution, serialize only integration.**
 | ----- | --------- |
 | Execution isolation | One git worktree per lane — agents never share a mutable filesystem |
 | Write arbitration | Governor edit-leases: first-touch per file, content-hash versioning (external-write detector), atomic registry writes, deny-path fresh-reload |
-| Area claims | Coordinator-owned `claims.json` — coarse scopes (`src/auth/**`) with `intent`; cross-area touches are **drift-logged** (soft) or **denied** (only coordinator-marked hot areas) |
-| Liveness | Leases expire when quiet 15 min **and** the owner's transcript is dead — a lane in one long tool call never loses its lease mid-work |
+| Area claims | SQLite registry (`governor.db`, WAL) driven by a terse claim CLI — coarse scopes (`src/auth`) with `intent`; cross-area touches are **drift-logged** (soft) or **denied** (only hot areas); claims validated against live session transcripts (fabricated ids refused) |
+| Liveness | Leases expire when quiet 15 min **and** the owner's transcript is dead — a lane in one long tool call never loses its lease mid-work; claim heartbeats are single-statement UPDATEs on the same DB |
 | Early conflict warning | `git merge-tree --write-tree <head> <lane>` — pure three-way merge simulation, no working-tree mutation, run between overlapping lanes' checkpoints |
 | Integration spine | One integration worktree; lane commits merge onto the integration HEAD, **qlty runs on the merged state**, green advances HEAD |
 | Repair | Conflicts go to a small repair agent in a disposable worktree — never wake both origin lanes |
