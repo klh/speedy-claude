@@ -70,8 +70,16 @@ structural, not regex-matched), argument-array spawns, shared contracts in
 | `pre-bash`   | secrets (gitleaks staged/history) · edit-enforce (shell file-writes) · skill-install · fast-tool nudges |
 | `pre-files`  | config-guard: control-plane writes (hooks/settings/skills/agents) require YOUR approval                 |
 | `post-files` | syntax gates (esbuild/ruff/jq/yq/taplo/zsh -n/sass) + markdown prettier — one process per edit          |
-| `stop`       | claim-done gate: re-verifies changed files before the turn ends                                         |
-| `session`    | skills pointer + insights inbox surfacing                                                               |
+
+**Multi-agent note** (learned from a 9-lane session that burned ~4.8K edit
+cycles): the edit-lease registry must be written **atomically** (temp+rename)
+and the deny path must **re-read it before denying** — unsynchronized
+read-modify-write produces stale snapshots that deny edits that were actually
+fine. Per-save formatting is skipped under `.claude/worktrees/` and runs once
+at claim-done (`_deferred_fmt`) — otherwise the formatter mutates the file
+after the lease hash was taken and every save risks a false deny.
+| `stop` | claim-done gate: re-verifies changed files before the turn ends |
+| `session` | skills pointer + insights inbox surfacing |
 
 Register via `settings.example.json`.
 

@@ -66,7 +66,15 @@
       "Bash(xcp:*)",
       "Bash(xh:*)",
       "Bash(yq:*)",
-      "Bash(zoxide:*)"
+      "Bash(zoxide:*)",
+      "Bash(sed:*)",
+      "Bash(bun:*)",
+      "Bash(bunx:*)",
+      "Bash(pnpm:*)",
+      "Bash(sleep:*)",
+      "Bash(pgrep:*)",
+      "Bash(awk:*)",
+      "Bash(date:*)"
     ],
     "deny": [
       "Bash(sudo rm:*)",
