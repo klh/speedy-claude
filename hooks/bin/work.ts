@@ -37,6 +37,32 @@ const arg = (name: string): string | null => {
 	return i >= 0 ? (rest[i + 1] ?? null) : null;
 };
 
+// --help anywhere wins before any parsing that could create state
+if (!cmd || rest.includes("--help") || rest.includes("-h")) {
+	if (cmd) {
+		console.log("work — hierarchical shatterable work graph. add | list | ready | mine | owned | show | take | release | start | done | fail | supersede | split | block | unblock | orphaned | reclaim");
+		process.exit(0);
+	}
+	console.error("usage: work <command> [args] — try `work --help`");
+	process.exit(2);
+}
+
+// option-looking tokens are never content: positionals skip known flags AND
+// their values, plus any other --token
+const KNOWN_FLAGS = new Set(["--scope", "--parent", "--priority", "--desc", "--by", "--reason", "--keep", "--sha", "--note", "--on", "--as"]);
+const pos = (): string[] => {
+	const out: string[] = [];
+	for (let i = 0; i < rest.length; i++) {
+		if (KNOWN_FLAGS.has(rest[i])) {
+			i++;
+			continue;
+		}
+		if (rest[i].startsWith("--")) continue;
+		out.push(rest[i]);
+	}
+	return out;
+};
+
 // project partitioning: shared identity from govdb (repo's common git dir) —
 // sessions in different projects never see or steal each other's work
 const PROJECT = projectIdentity();

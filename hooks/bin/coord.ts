@@ -33,6 +33,11 @@ const die = (m: string): never => {
 
 const db: Database = openGovernorDb();
 const [cmd, ...rest] = process.argv.slice(2);
+// --help anywhere wins before any parsing that could create state
+if (rest.includes("--help") || rest.includes("-h")) {
+	console.log("coord — control plane. emit | poll | wait | fact | bootstrap | state | inbox | capsule | pause | paused | resume | resumed | resume-session | doctor-session | who-knows | consult | consult-reply | consults | gc | fleet");
+	process.exit(0);
+}
 const arg = (name: string): string | null => {
 	const i = rest.indexOf(name);
 	return i >= 0 ? (rest[i + 1] ?? null) : null;
