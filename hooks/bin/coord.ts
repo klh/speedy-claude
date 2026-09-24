@@ -327,14 +327,20 @@ if (cmd === "emit") {
 	// one-line fleet projection for a terminal pane (the Desktop panel
 	// projection lives in subagent-statusline.ts; the CLI inline rows are
 	// harness-owned and ignore it)
-	const lanes = db.query("SELECT DISTINCT sid FROM claims ORDER BY sid").all() as { sid: string }[];
+	const crows = db.query("SELECT sid, intent FROM claims ORDER BY sid").all() as { sid: string; intent: string | null }[];
+	const lanes = [...new Set(crows.map((c) => c.sid))].sort();
 	const states = db.query("SELECT key, value FROM facts WHERE key LIKE 'lane.%.state'").all() as { key: string; value: string }[];
 	const byKey = new Map(states.map((s) => [s.key, s.value]));
+	const names = new Map<string, string>();
+	for (const c of crows) {
+		if (c.intent && !names.has(c.sid)) names.set(c.sid, c.intent.length > 14 ? `${c.intent.slice(0, 13)}…` : c.intent);
+	}
 	const head = (db.query("SELECT value FROM facts WHERE key = 'integration.head'").get() as { value: string } | null)?.value;
 	const parts = lanes.map((l) => {
 		const st = byKey.get(`lane.${l.sid}.state`);
-		const g = st === "PAUSED" || st === "PAUSE_REQUESTED" ? amber("⏸") : st === "RESUME_READY" ? cyan("↻") : st === "BLOCKED" ? red("⚠") : green("▶");
-		return `${g} ${dim(l.sid.slice(0, 8))}`;
+		const g =
+			st === "PAUSE_REQUESTED" ? amber("◐") : st === "PAUSED" ? amber("⏸") : st === "RESUME_READY" ? cyan("↻") : st === "BLOCKED" ? red("⚠") : green("▶");
+		return `${g} ${dim(names.get(l) ?? l.slice(0, 8))}`;
 	});
 	console.log(`${head ? `${dim(`@${head.slice(0, 7)}`)}  ` : ""}${parts.join("  ") || dim("(no claimed lanes)")}`);
 } else {
