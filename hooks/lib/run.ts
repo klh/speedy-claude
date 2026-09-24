@@ -15,7 +15,11 @@ export function have(bin: string): boolean {
 }
 
 export function run(cmd: string, args: string[], opts: { cwd?: string } = {}): RunResult {
-  const r = spawnSync(cmd, args, { encoding: "utf8", ...opts });
+  let r = spawnSync(cmd, args, { encoding: "utf8", ...opts });
+  // status null = spawn failure (fork/resource exhaustion under load), not a
+  // scan verdict — retry once so a loaded machine doesn't flip a clean scan
+  // into a deny. A real leak exits 1 and is never retried.
+  if (r.status === null && r.error) r = spawnSync(cmd, args, { encoding: "utf8", ...opts });
   return { ok: r.status === 0, status: r.status, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 }
 

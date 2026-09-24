@@ -30,7 +30,8 @@ const RULES =
 	"RULES: Work Graph (bun ~/.claude/bin/work.ts) is authoritative — " +
 	"continue OWNED before taking new; own an item (work take) before code " +
 	"work; never reconstruct mutable state from Markdown; parallelizable " +
-	"work gets work split.";
+	"work gets work split. Stuck or need a colleague's context: " +
+	"coord consult/who-knows (questions, never ownership).";
 
 const UPSERT =
 	"INSERT INTO sessions (sid, project, role, parent_sid, worktree, started_at, hb, state) " +
