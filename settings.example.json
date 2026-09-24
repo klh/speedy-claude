@@ -154,5 +154,9 @@
   "statusLine": {
     "type": "command",
     "command": "bun $HOME/.claude/statusline.ts"
+  },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "bun $HOME/.claude/hooks/subagent-statusline.ts"
   }
 }

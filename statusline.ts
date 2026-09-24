@@ -5,7 +5,8 @@
 // the payload's own cwd; output is template literals, not printf %b escape
 // soup. LC_ALL irrelevant — no shell number formatting.
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 type Payload = {
   model?: { id?: string; display_name?: string };
@@ -121,4 +122,46 @@ const DUR = Math.round((p.cost?.total_duration_ms ?? 0) / 1000);
 const COST = (p.cost?.total_cost_usd ?? 0).toFixed(3);
 const tail = narrow ? "" : `${SEP} ${gr(API_DUR)}/${pu(DUR)}s${SEP}${gr(COST)}`;
 
-process.stdout.write(`${R}${ICON} [ ${MC(MODEL_NAME)}${R}${ETAG} ]  ${LOC}${GIT}${CHG}${CTX}${SWARM}${tail} ${ICON}\n`);
+// ---- agent progress bars (any writer; /tmp/agent-progress/<id>.json) ----
+// Protocol: {at, done, total, label?, etaSeconds?}, 15-min TTL, per-task id.
+// Written via `bun ~/.claude/bin/progress.ts set <id> <done> <total> [label] [eta]`.
+let NR = "";
+try {
+  const fresh: { id: string; done: number; total: number; label?: string; etaSeconds?: number }[] = [];
+  for (const file of readdirSync("/tmp/agent-progress").sort()) {
+    try {
+      const st = JSON.parse(readFileSync(join("/tmp/agent-progress", file), "utf8")) as {
+        at: number; done: number; total: number; label?: string; etaSeconds?: number;
+      };
+      if (Date.now() - st.at < 15 * 60_000 && st.total > 0 && st.done >= 0) {
+        fresh.push({ id: file.replace(/\.json$/, ""), ...st });
+      }
+    } catch { /* corrupt/foreign entry — skip */ }
+  }
+  const shown = fresh.slice(0, 2);
+  for (const st of shown) {
+    const frac = Math.min(1, st.done / st.total);
+    const filled = Math.min(6, Math.round(frac * 6));
+    const bar = "█".repeat(filled) + "░".repeat(6 - filled);
+    const mins = st.etaSeconds != null ? Math.max(0, Math.round(st.etaSeconds / 60)) : 0;
+    const label = (st.label ?? st.id).slice(0, 24);
+    NR += `${SEP}${bar} ${st.done}/${st.total} ${label}${mins ? ` ~${mins}m` : ""}`;
+  }
+  if (fresh.length > shown.length) NR += `${SEP}+${fresh.length - shown.length} jobs`;
+} catch { /* no agent-progress dir — silent */ }
+
+// ---- coordination plane lane states (governor.db) ----
+let LANES = "";
+try {
+  const { Database } = await import("bun:sqlite");
+  const db = new Database(`${HOME}/.cache/claude-governor/governor.db`);
+  const paused = db.query("SELECT key FROM facts WHERE key LIKE 'lane.%.paused'").all() as { key: string }[];
+  const nLanes = (db.query("SELECT COUNT(DISTINCT sid) AS n FROM claims").get() as { n: number }).n;
+  const head = (db.query("SELECT value FROM facts WHERE key = 'integration.head'").get() as { value: string } | null)?.value;
+  db.close();
+  if (nLanes > 0 || head) {
+    LANES = `${SEP}${nLanes > 0 ? pu(nLanes + "◫") : ""}${paused.length ? ` ${br("⏸" + paused.length)}` : ""}${head ? ` ${bk("@" + head.slice(0, 7))}` : ""}`;
+  }
+} catch { /* no control plane — silent */ }
+
+process.stdout.write(`${R}${ICON} [ ${MC(MODEL_NAME)}${R}${ETAG} ]  ${LOC}${GIT}${CHG}${CTX}${SWARM}${NR}${LANES}${tail} ${ICON}\n`);

@@ -47,30 +47,187 @@ const paint =
 const dim = paint("2");
 const cyan = paint("36");
 const green = paint("32");
+const amber = paint("33");
 
 if (cmd === "emit") {
 	const kind = rest[0];
-	if (!kind) die("usage: emit <kind> [--scope s] [--sha x] [--note \"...\"] [--field=value ...] [--as sid]");
+	if (!kind) die('usage: emit <kind> [--to sid] [--scope s] [--sha x] [--note "..."] [--field=value ...] [--as sid]');
 	const scope = arg("--scope");
 	const sha = arg("--sha");
 	const note = arg("--note");
 	const source = arg("--as") ?? "unknown";
+	const to = arg("--to");
 	// arbitrary --key=value passthrough: the event IS the completion report
 	// (e.g. --gate=pass --artifact=stale) — one source of truth, no retelling
 	const extra: Record<string, string> = {};
 	for (const t of rest.slice(1)) {
 		const m = /^--([\w-]+)=(.+)$/.exec(t);
-		if (m && !["scope", "sha", "note", "as"].includes(m[1])) extra[m[1]] = m[2];
+		if (m && !["scope", "sha", "note", "as", "to"].includes(m[1])) extra[m[1]] = m[2];
 	}
 	const payload = JSON.stringify({ ...(sha ? { sha } : {}), ...(note ? { note } : {}), ...extra });
-	db.query("INSERT INTO events (ts, source, kind, scope, payload) VALUES (?, ?, ?, ?, ?)").run(
+	db.query("INSERT INTO events (ts, source, kind, scope, payload, target) VALUES (?, ?, ?, ?, ?, ?)").run(
 		Date.now(),
 		source,
 		kind,
 		scope,
 		payload,
+		to,
 	);
-	console.log(`${green("✓")} ${dim(`event queued #${(db.query("SELECT last_insert_rowid() AS id").get() as { id: number }).id}`)}`);
+	console.log(`${green("✓")} ${dim(`event queued #${(db.query("SELECT last_insert_rowid() AS id").get() as { id: number }).id} → ${to ? `@${to.slice(0, 8)}` : "bus"}`)}`);
+} else if (cmd === "state") {
+	// between-rounds check for a lane: canonical state + inbox + current HEAD
+	const as = arg("--as") ?? die("usage: state --as <sid>");
+	const st = db.query("SELECT value FROM facts WHERE key = ?").get(`lane.${as}.state`) as { value: string } | null;
+	const head = db.query("SELECT value FROM facts WHERE key = 'integration.head'").get() as { value: string } | null;
+	const ncur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(as) as { event_id: number } | null)?.event_id ?? 0;
+	const pending = db.query("SELECT COUNT(*) AS n FROM events WHERE target = ? AND id > ?").get(as, ncur) as { n: number };
+	console.log(
+		`state=${st?.value ?? "RUNNING"}  inbox=${pending.n}  head=${head?.value ?? dim("unknown")}`,
+	);
+} else if (cmd === "inbox") {
+	// directed events only; never advances the cursor unless --ack
+	const as = arg("--as") ?? die("usage: inbox --as <sid> [--ack]");
+	const ncur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(as) as { event_id: number } | null)?.event_id ?? 0;
+	const rows = db
+		.query("SELECT id, ts, source, kind, scope, payload FROM events WHERE target = ? AND id > ? ORDER BY id")
+		.all(as, ncur) as Ev[];
+	for (const r of rows) {
+		const { sha, note, ...restP } = r.payload ? (JSON.parse(r.payload) as Record<string, string>) : {};
+		const extra = Object.entries(restP)
+			.map(([k, v]) => `${dim(`${k}=`)}${v}`)
+			.join(" ");
+		console.log(
+			`  ${dim(`#${r.id}`)} ${cyan(r.kind)}${r.scope ? ` ${r.scope}` : ""}${sha ? green(`@${sha.slice(0, 8)}`) : ""}${Object.keys(restP).length ? `  ${extra}` : ""}${note ? dim(` — ${note}`) : ""}`,
+		);
+	}
+	if (rest.includes("--ack")) {
+		const latest = rows.length ? Math.max(...rows.map((r) => r.id)) : ncur;
+		const c = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(as) as { event_id: number } | null)?.event_id ?? 0;
+		if (latest > c) {
+			if (c) db.query("UPDATE cursors SET event_id = ? WHERE sid = ?").run(latest, as);
+			else db.query("INSERT INTO cursors (sid, event_id) VALUES (?, ?)").run(as, latest);
+		}
+	}
+	if (!rows.length) console.log(dim("(inbox empty)"));
+} else if (cmd === "pause") {
+	// cooperative preemption: PAUSE_REQUESTED is interrupt-class and goes out
+	// immediately — the lane finishes its atomic edit, checkpoints, writes a
+	// continuation capsule, marks PAUSED, then waits.
+	const sid = rest[0];
+	const reason = arg("--reason");
+	if (!sid || !reason) die('usage: pause <sid> --reason "why" [--scope s] [--intervention "what is coming"]');
+	const scope = arg("--scope");
+	const intervention = arg("--intervention");
+	const source = arg("--as") ?? "coordinator";
+	db.query("INSERT INTO events (ts, source, kind, scope, payload, target) VALUES (?, ?, 'pause_requested', ?, ?, ?)").run(
+		Date.now(),
+		source,
+		scope,
+		JSON.stringify({ ...(reason ? { reason } : {}), ...(intervention ? { intervention } : {}) }),
+		sid,
+	);
+	// canonical lane state: RUNNING → PAUSE_REQUESTED (→ PAUSED by the lane itself)
+	db.query(
+		"INSERT INTO facts (key, value, source, version, ts) VALUES ('lane.' || ? || '.state', 'PAUSE_REQUESTED', ?, 1, ?) ON CONFLICT(key) DO UPDATE SET value = 'PAUSE_REQUESTED', source = excluded.source, version = version + 1, ts = excluded.ts",
+	).run(sid, source, Date.now());
+	console.log(`${amber("⏸")} ${dim(`pause_requested → @${sid.slice(0, 8)}`)}`);
+} else if (cmd === "paused") {
+	// the LANE's own transition: PAUSE_REQUESTED → PAUSED. Requires proof of a
+	// safe boundary: checkpoint SHA (--sha) AND a written capsule. A model
+	// cannot skip the restart context by accident.
+	const as = arg("--as") ?? die("usage: paused --as <sid> --sha <checkpoint-sha> [--step s]");
+	const sha = arg("--sha") ?? die("paused requires --sha <checkpoint-sha> — no checkpoint, no pause");
+	const cap = db.query("SELECT value FROM facts WHERE key = ?").get(`lane.${as}.capsule`) as { value: string } | null;
+	if (!cap) die("no continuation capsule — `coord capsule set` before pausing (restart context is mandatory)");
+	let capsule: { checkpoint?: string } = {};
+	try {
+		capsule = JSON.parse(cap.value) as { checkpoint?: string };
+	} catch {}
+	if (capsule.checkpoint !== sha)
+		die(`capsule checkpoint (${capsule.checkpoint ?? "none"}) ≠ --sha ${sha} — write a fresh capsule for THIS checkpoint`);
+	const st = db.query("SELECT value FROM facts WHERE key = ?").get(`lane.${as}.state`) as { value: string } | null;
+	if (st?.value !== "PAUSE_REQUESTED") die(`lane state is ${st?.value ?? "RUNNING"}, not PAUSE_REQUESTED — nothing to acknowledge`);
+	db.query("UPDATE facts SET value = 'PAUSED', source = ?, version = version + 1, ts = ? WHERE key = ?").run(
+		as,
+		Date.now(),
+		`lane.${as}.state`,
+	);
+	db.query("INSERT INTO events (ts, source, kind, scope, payload, target) VALUES (?, ?, 'paused', ?, ?, ?)").run(
+		Date.now(),
+		as,
+		arg("--scope"),
+		JSON.stringify({ sha, ...(arg("--step") ? { step: arg("--step") } : {}) }),
+		"coordinator",
+	);
+	console.log(`${amber("⏸")} ${dim(`PAUSED @${sha.slice(0, 8)} — capsule + checkpoint banked`)}`);
+} else if (cmd === "resume") {
+	// in-band change landed: RESUME_READY carries the delta summary; clears the
+	// pause fact. Refuses when the lane never reached PAUSED — never race a
+	// working lane.
+	const sid = rest[0];
+	const onto = arg("--onto");
+	if (!sid || !onto) die("usage: resume <sid> --onto <sha> [--diff-from <pause-base>] [--note \"delta summary\"]");
+	const paused = db.query("SELECT value FROM facts WHERE key = ?").get(`lane.${sid}.state`) as { value: string } | null;
+	if (paused?.value !== "PAUSED")
+		die(`lane @${sid.slice(0, 8)} state is ${paused?.value ?? "RUNNING"} — resume requires PAUSED (never race a working lane)`);
+	const diffFrom = arg("--diff-from");
+	let changed: string[] = [];
+	if (diffFrom) {
+		const d = Bun.spawnSync(["git", "diff", "--name-status", `${diffFrom}..${onto}`], { stdout: "pipe", stderr: "pipe" });
+		changed = new TextDecoder()
+			.decode(d.stdout)
+			.split("\n")
+			.filter((l) => l.trim())
+			.slice(0, 30)
+			.map((l) => l.replace(/\t/g, " "));
+	}
+	const source = arg("--as") ?? "coordinator";
+	db.query("INSERT INTO events (ts, source, kind, scope, payload, target) VALUES (?, ?, 'resume_ready', ?, ?, ?)").run(
+		Date.now(),
+		source,
+		arg("--scope"),
+		JSON.stringify({
+			onto,
+			...(paused ? { pausedAt: paused.value } : {}),
+			...(changed.length ? { changed } : {}),
+			...(arg("--note") ? { note: arg("--note") } : {}),
+		}),
+		sid,
+	);
+	// PAUSED → RESUME_READY (the worker reconciles, then confirms via `resumed`)
+	db.query(
+		"INSERT INTO facts (key, value, source, version, ts) VALUES ('lane.' || ? || '.state', 'RESUME_READY', ?, 1, ?) ON CONFLICT(key) DO UPDATE SET value = 'RESUME_READY', source = excluded.source, version = version + 1, ts = excluded.ts",
+	).run(sid, source, Date.now());
+	console.log(`${green("↻")} ${dim(`resume_ready → @${sid.slice(0, 8)} onto ${onto.slice(0, 8)}${changed.length ? ` (${changed.length} files changed)` : ""}`)}`);
+} else if (cmd === "resumed") {
+	// the worker's confirmation: RESUME_READY → RUNNING (worktree reconciled,
+	// targeted tests green)
+	const as = arg("--as") ?? die("usage: resumed --as <sid>");
+	const st = db.query("SELECT value FROM facts WHERE key = ?").get(`lane.${as}.state`) as { value: string } | null;
+	if (st?.value !== "RESUME_READY") die(`lane state is ${st?.value ?? "RUNNING"} — nothing to resume-confirm`);
+	db.query("UPDATE facts SET value = 'RUNNING', source = ?, version = version + 1, ts = ? WHERE key = ?").run(
+		as,
+		Date.now(),
+		`lane.${as}.state`,
+	);
+	console.log(`${green("▶")} ${dim(`RUNNING — @${as.slice(0, 8)} reconciled and re-uptaken`)}`);
+} else if (cmd === "capsule") {
+	// continuation capsule: the minimum restart packet (checkpoint/step/next/assumptions)
+	const as = arg("--as") ?? rest[0];
+	if (!as || rest[0] === "get") {
+		const cap = db.query("SELECT value FROM facts WHERE key = ?").get(`lane.${as ?? ""}.capsule`) as { value: string } | null;
+		console.log(cap?.value ?? dim("(no capsule)"));
+	} else {
+		const extra: Record<string, string> = {};
+		for (const t of process.argv.slice(2)) {
+			const m = /^--([\w-]+)=(.+)$/.exec(t);
+			if (m && !["as"].includes(m[1])) extra[m[1]] = m[2];
+		}
+		db.query(
+			"INSERT INTO facts (key, value, source, version, ts) VALUES (?, ?, ?, 1, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, version = version + 1, ts = excluded.ts",
+		).run(`lane.${as}.capsule`, JSON.stringify({ ...extra, ts: Date.now() }), arg("--as") ?? as, Date.now());
+		console.log(`${green("✓")} ${dim(`capsule stored for @${as.slice(0, 8)}`)}`);
+	}
 } else if (cmd === "poll") {
 	const as = arg("--as");
 	const scope = arg("--scope");
@@ -80,8 +237,11 @@ if (cmd === "emit") {
 	const since = cur?.event_id ?? 0;
 	// fetch all past the cursor, filter in TS, THEN limit — a SQL LIMIT here
 	// would cut off the newest matching events; and the cursor may only advance
-	// to what was actually SHOWN, or filtered consumers silently lose events
-	let rows = db.query("SELECT id, ts, source, kind, scope, payload FROM events WHERE id > ? ORDER BY id").all(since) as Ev[];
+	// to what was actually SHOWN, or filtered consumers silently lose events.
+	// A consumer with --as sees broadcasts + anything directed at it.
+	let rows = as
+		? (db.query("SELECT id, ts, source, kind, scope, payload FROM events WHERE id > ? AND (target IS NULL OR target = ?) ORDER BY id").all(since, as) as Ev[])
+		: (db.query("SELECT id, ts, source, kind, scope, payload FROM events WHERE id > ? AND target IS NULL ORDER BY id").all(since) as Ev[]);
 	if (scope) rows = rows.filter((r) => r.scope && (r.scope === scope || scopeCovers(r.scope, scope) || scopeCovers(scope, r.scope)));
 	if (kinds.length) rows = rows.filter((r) => kinds.includes(r.kind));
 	rows = rows.slice(0, limit);
@@ -112,7 +272,9 @@ if (cmd === "emit") {
 		let interval = 250;
 		for (;;) {
 			const cur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(as) as { event_id: number } | null)?.event_id ?? 0;
-			let rows = db.query("SELECT id, ts, source, kind, scope, payload FROM events WHERE id > ? ORDER BY id").all(cur) as Ev[];
+			let rows = db
+				.query("SELECT id, ts, source, kind, scope, payload FROM events WHERE id > ? AND (target IS NULL OR target = ?) ORDER BY id")
+				.all(cur, as) as Ev[];
 			if (scope) rows = rows.filter((r) => r.scope && (r.scope === scope || scopeCovers(r.scope, scope) || scopeCovers(scope, r.scope)));
 			if (kinds.length) rows = rows.filter((r) => kinds.includes(r.kind));
 			if (rows.length) {
