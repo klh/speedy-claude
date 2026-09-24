@@ -16,7 +16,7 @@
 // with NEW information, never with history.
 import { Database } from "bun:sqlite";
 import { statSync } from "node:fs";
-import { openGovernorDb, projectIdentity } from "../lib/govdb.ts";
+import { openGovernorDb, projectIdentity, CAPABILITIES } from "../lib/govdb.ts";
 
 interface Ev {
 	id: number;
@@ -332,15 +332,27 @@ if (cmd === "emit") {
 } else if (cmd === "bootstrap") {
 	// the session-start ritual: identity + owned work + ready pool + inbox,
 	// so no session reconstructs operational state from Markdown
-	const as = arg("--as") ?? die("usage: bootstrap --as <sid> [--project p] [--role r] [--parent sid] [--worktree w]");
+	const as = arg("--as") ?? die("usage: bootstrap --as <sid> [--role r] [--parent sid] [--worktree w] [--caps shell,fs,...]");
 	// project identity is always derived (projectIdentity) — no --project
 	// override, it would let sessions fragment the graph by hand
 	let project = projectIdentity();
 	const role = arg("--role") ?? "worker";
+	// capability-aware dispatch (v2): --caps csv registers what this agent type
+	// offers; lanes inherit the parent's capabilities unless overridden — a
+	// NO-SHELL agent type can then never take shell-requiring work twice
+	let caps: string | null = arg("--caps") ?? null;
+	if (caps) {
+		const bad = caps.split(",").filter((c) => !CAPABILITIES.includes(c.trim()));
+		if (bad.length) die(`unknown capability: ${bad.join(",")} — vocabulary: ${CAPABILITIES.join(",")}`);
+		caps = caps.split(",").map((c) => c.trim()).filter(Boolean).join(",");
+	} else {
+		const parentSid = arg("--parent");
+		if (parentSid) caps = (db.query("SELECT capabilities FROM sessions WHERE sid = ?").get(parentSid) as { capabilities: string | null } | null)?.capabilities ?? null;
+	}
 	sweepStaleSessions();
 	db.query(
-		"INSERT INTO sessions (sid, project, role, parent_sid, worktree, started_at, hb, state) VALUES (?, ?, ?, ?, ?, ?, ?, 'RUNNING') ON CONFLICT(sid) DO UPDATE SET project = excluded.project, role = excluded.role, hb = excluded.hb",
-	).run(as, project, role, arg("--parent"), arg("--worktree") ?? null, Date.now(), Date.now());
+		"INSERT INTO sessions (sid, project, role, parent_sid, worktree, started_at, hb, state, capabilities) VALUES (?, ?, ?, ?, ?, ?, ?, 'RUNNING', ?) ON CONFLICT(sid) DO UPDATE SET project = excluded.project, role = excluded.role, hb = excluded.hb, capabilities = COALESCE(excluded.capabilities, sessions.capabilities)",
+	).run(as, project, role, arg("--parent"), arg("--worktree") ?? null, Date.now(), Date.now(), caps);
 	const mine = db.query("SELECT id, title, state FROM work_items WHERE project = ? AND owner_sid = ? AND state NOT IN ('DONE','SUPERSEDED') ORDER BY id").all(project, as) as { id: string; title: string; state: string }[];
 	const readyN = (db.query("SELECT COUNT(*) AS n FROM work_items WHERE project = ? AND state = 'READY'").get(project) as { n: number }).n;
 	const ncur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(as) as { event_id: number } | null)?.event_id ?? 0;

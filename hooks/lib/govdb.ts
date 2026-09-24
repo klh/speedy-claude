@@ -24,6 +24,10 @@ export function projectIdentity(): string {
 	return realpathSync(process.cwd());
 }
 
+// capability vocabulary for capability-aware dispatch (schema v2):
+// work_items.requires ⊆ sessions.capabilities or work take refuses
+export const CAPABILITIES = ["shell", "fs", "git", "build", "mcp", "vision", "browser", "network"];
+
 export function openGovernorDb(): Database {
 	mkdirSync(REG, { recursive: true });
 	const db = new Database(`${REG}/governor.db`, { create: true });
@@ -84,6 +88,14 @@ export function openGovernorDb(): Database {
 	db.run(
 		"CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, project TEXT, role TEXT, parent_sid TEXT, worktree TEXT, started_at INTEGER NOT NULL, hb INTEGER NOT NULL, state TEXT NOT NULL DEFAULT 'RUNNING')",
 	);
+	// v2 — capability-aware dispatch: work declares requires (csv), sessions
+	// advertise capabilities (csv); work take refuses requires ⊄ capabilities.
+	// NULL on either side = legacy = no constraint. Explicit migration step.
+	const sessCols = (db.query("PRAGMA table_info(sessions)").all() as { name: string }[]).map((c) => c.name);
+	if (!sessCols.includes("capabilities")) db.run("ALTER TABLE sessions ADD COLUMN capabilities TEXT");
+	const wiCols = (db.query("PRAGMA table_info(work_items)").all() as { name: string }[]).map((c) => c.name);
+	if (!wiCols.includes("requires")) db.run("ALTER TABLE work_items ADD COLUMN requires TEXT");
+	if (uv < 2) db.run("PRAGMA user_version = 2");
 	db.run(
 		"CREATE TABLE IF NOT EXISTS facts (key TEXT PRIMARY KEY, value TEXT, source TEXT, version INTEGER NOT NULL DEFAULT 1, ts INTEGER NOT NULL)",
 	);

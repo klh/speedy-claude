@@ -12,8 +12,8 @@ const PORT = Number(process.argv[process.argv.indexOf("--port") + 1] ?? 7799) ||
 const esc = (s: unknown): string =>
 	String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c));
 
-function json(data: unknown): Response {
-	return new Response(JSON.stringify(data), { headers: { "content-type": "application/json" } });
+function json(data: unknown, status = 200): Response {
+	return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json" } });
 }
 
 function ago(ts: number | null | undefined): number {
@@ -121,7 +121,7 @@ function needsMap(): Record<string, { id: number; tsAgo: number; source: string;
 	for (const s of db.query("SELECT sid FROM sessions").all() as { sid: string }[]) {
 		const cur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(s.sid) as { event_id: number } | null)?.event_id ?? 0;
 		for (const e of db
-			.query("SELECT id, ts, source, payload FROM events WHERE target = ? AND id > ? AND kind LIKE 'NEED%' ORDER BY id")
+			.query("SELECT id, ts, source, payload FROM events WHERE target = ? AND id > ? AND kind LIKE 'NEED%' AND id NOT IN (SELECT CAST(substr(key, 11) AS INTEGER) FROM facts WHERE key LIKE 'board.ack.%') ORDER BY id")
 			.all(s.sid, cur) as any[]) {
 			let note = "";
 			try {
@@ -186,8 +186,11 @@ header .right { margin-left:auto; display:flex; align-items:center; gap:12px; }
 #needsPanel .q { margin-bottom:12px; }
 #needsPanel .q .who { font-size:11px; color:#8a8781; margin-bottom:2px; }
 #needsPanel .q .txt { font-size:12px; margin-bottom:4px; word-break:break-word; }
-#needsPanel .q .cmd { font-size:10px; color:#d8900f; cursor:pointer; word-break:break-all; }
-#needsPanel .q .cmd:hover { text-decoration:underline; }
+#needsPanel .q .ans { display:flex; gap:6px; }
+#needsPanel .q .ans input { flex:1; background:#141413; color:#e8e6e1; border:1px solid rgba(255,255,255,.12); border-radius:2px; padding:4px 8px; font:11px ui-monospace,Menlo,monospace; }
+#needsPanel .q .ans button { background:#141413; color:#d8900f; border:1px solid #d8900f; border-radius:2px; padding:4px 10px; font:10px ui-monospace,Menlo,monospace; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; }
+#needsPanel .q .ans button:disabled { opacity:.5; cursor:default; }
+#needsPanel .dismiss { color:#8a8781; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
 select { background:#1c1b19; color:#e8e6e1; border:1px solid rgba(255,255,255,.12); border-radius:2px; padding:3px 8px; font:11px ui-monospace,Menlo,monospace; max-width:380px; }
 #wrap { display:flex; gap:24px; align-items:flex-start; }
 #board { flex:1; display:grid; grid-template-columns:repeat(3,minmax(240px,1fr)); gap:12px; align-content:start; overflow-x:auto; }
@@ -230,7 +233,7 @@ select { background:#1c1b19; color:#e8e6e1; border:1px solid rgba(255,255,255,.1
     <div class="feed"><h2>Event tail</h2><div id="events"></div></div>
   </div>
 </div>
-<div id="needsPanel"><h2>NEEDS YOUR ANSWER <span id="nClose">✕ close</span></h2><div id="nList"></div></div>
+<div id="needsPanel"><h2>NEEDS YOUR ANSWER <span id="nClose">&times; close</span></h2><div id="nList"></div></div>
 <script>
 var sel = document.getElementById('sess');
 var sessLoaded = false;
@@ -312,17 +315,30 @@ function openNeeds(sid) {
     if (sid && s !== sid) continue;
     for (var i = 0; i < needs[s].length; i++) {
       var n = needs[s][i];
-      var cmd = 'bun ~/.claude/bin/coord.ts emit ANSWER --to ' + n.source + ' --note "<your answer>"';
-      rows += '<div class="q"><div class="who">' + esc(d.labels[s] || s.slice(0,10)) + ' · asked · ' + n.tsAgo + 's ago · event #' + n.id + '</div><div class="txt">' + esc(n.note || '(no note)') + '</div><div class="cmd" onclick="copyCmd(this)">' + esc(cmd) + '</div></div>';
+      rows += '<div class="q"><div class="who">' + esc(d.labels[s] || s.slice(0,10)) + ' · asked · ' + n.tsAgo + 's ago · event #' + n.id + ' · <span class="dismiss" onclick="ackEv(' + n.id + ', this)">dismiss</span></div><div class="txt">' + esc(n.note || '(no note)') + '</div><div class="ans"><input placeholder="type your answer…" data-to="' + esc(n.source) + '"><button onclick="sendAns(this, \'' + n.source + '\', ' + n.id + ')">send</button></div></div>';
     }
   }
   document.getElementById('nList').innerHTML = rows || '<div class="q"><div class="txt">nothing waiting</div></div>';
   document.getElementById('needsPanel').style.display = 'block';
 }
-function copyCmd(el) {
-  if (navigator.clipboard) navigator.clipboard.writeText(el.textContent);
-  var old = el.textContent; el.textContent = 'copied ✓';
-  setTimeout(function(){ el.textContent = old; }, 900);
+function sendAns(btn, to, forEvent) {
+  var inp = btn.parentNode.querySelector('input');
+  var note = inp.value.trim();
+  if (!note) { inp.placeholder = 'type an answer first'; return; }
+  btn.disabled = true; btn.textContent = '…';
+  fetch('/api/answer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ to: to, note: note, forEvent: forEvent }) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      btn.textContent = d.ok ? '✓ sent' : '✗ failed';
+      if (d.ok) { inp.value = ''; inp.disabled = true; inp.placeholder = 'sent → ' + (d.to || to); }
+      else { btn.disabled = false; btn.title = d.output || d.error || ''; inp.placeholder = (d.output || d.error || 'failed').slice(0, 60); }
+      setTimeout(tick, 300);
+    })
+    .catch(function(){ btn.textContent = '✗ failed'; btn.disabled = false; });
+}
+function ackEv(id, el) {
+  fetch('/api/ack', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: id }) })
+    .then(function(){ if (el) { var q = el.closest('.q'); if (q) q.style.opacity = '.35'; } setTimeout(tick, 300); });
 }
 document.getElementById('nClose').onclick = function(){ document.getElementById('needsPanel').style.display = 'none'; };
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') document.getElementById('needsPanel').style.display = 'none'; });
@@ -337,14 +353,57 @@ tick();
 Bun.serve({
 	port: PORT,
 	hostname: "127.0.0.1",
-	fetch(req) {
+	async fetch(req) {
 		const url = new URL(req.url);
 		if (url.pathname === "/api/data") {
 			const sid = url.searchParams.get("session") ?? "";
 			return json(sid ? payloadFor(sid) : payload());
 		}
-		if (url.pathname === "/") return new Response(HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
+		if (req.method === "POST" && url.pathname === "/api/answer") {
+			// the board's single write: relay a human answer into the event bus
+			const body = (await req.json().catch(() => null)) as { to?: string; note?: string; forEvent?: number } | null;
+			let to = String(body?.to ?? "");
+			const note = String(body?.note ?? "").trim().slice(0, 2000);
+			const forEvent = Number(body?.forEvent ?? 0);
+			if (!to || !note) return json({ ok: false, error: "missing target or note" }, 400);
+			// accept full sids, unique prefixes, or live bus aliases (an identity
+			// that has emitted before — e.g. a coordinator's chosen --as name)
+			const exact = db.query("SELECT sid FROM sessions WHERE sid = ?").get(to) as { sid: string } | null;
+			if (exact) to = exact.sid;
+			else {
+				const cands = db.query("SELECT sid FROM sessions WHERE sid LIKE ? || '%'").all(to) as { sid: string }[];
+				if (cands.length === 1) to = cands[0]!.sid;
+				else {
+					const alias = !!db.query("SELECT 1 AS x FROM events WHERE source = ? LIMIT 1").get(to);
+					if (!alias) return json({ ok: false, error: cands.length > 1 ? "ambiguous sid: " + to : "unknown target session: " + to }, 400);
+				}
+			}
+			const p = Bun.spawnSync(
+				["bun", process.env.HOME + "/.claude/bin/coord.ts", "emit", "ANSWER", "--to", to, "--note", note, "--as", "fleet-board"],
+				{ stdout: "pipe", stderr: "pipe" },
+			);
+			const out = (p.stdout.toString() + " " + p.stderr.toString()).trim();
+			if (p.exitCode === 0 && forEvent)
+				db.query("INSERT OR REPLACE INTO facts (key, value, source, version, ts) VALUES (?, '1', 'fleet-board', 1, ?)").run(
+					"board.ack." + forEvent,
+					Date.now(),
+				);
+			return json({ ok: p.exitCode === 0, output: out.slice(0, 400), to }, p.exitCode === 0 ? 200 : 500);
+		}
+		if (req.method === "POST" && url.pathname === "/api/ack") {
+			// dismiss a question answered out-of-band
+			const body = (await req.json().catch(() => null)) as { id?: number } | null;
+			const id = Number(body?.id ?? 0);
+			if (!id) return json({ ok: false, error: "missing event id" }, 400);
+			db.query("INSERT OR REPLACE INTO facts (key, value, source, version, ts) VALUES (?, '1', 'fleet-board', 1, ?)").run(
+				"board.ack." + id,
+				Date.now(),
+			);
+			return json({ ok: true });
+		}
+		if (url.pathname === "/")
+			return new Response(HTML, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 		return new Response("not found", { status: 404 });
 	},
 });
-console.log(`fleet board → http://127.0.0.1:${PORT}  (governor.db, read-only, poll 1s)`);
+console.log(`fleet board → http://127.0.0.1:${PORT}  (governor.db, 1s poll; write endpoint: POST /api/answer)`);

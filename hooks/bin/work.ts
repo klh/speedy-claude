@@ -23,7 +23,7 @@
 //   work orphaned                        / work reclaim <id>
 import { existsSync, statSync } from "node:fs";
 import { Database } from "bun:sqlite";
-import { openGovernorDb, projectIdentity } from "../lib/govdb.ts";
+import { openGovernorDb, projectIdentity, CAPABILITIES } from "../lib/govdb.ts";
 
 const die = (m: string): never => {
 	console.error(`work: ${m}`);
@@ -49,7 +49,8 @@ if (!cmd || cmd === "--help" || cmd === "-h" || rest.includes("--help") || rest.
 
 // option-looking tokens are never content: positionals skip known flags AND
 // their values, plus any other --token
-const KNOWN_FLAGS = new Set(["--scope", "--parent", "--priority", "--desc", "--by", "--reason", "--keep", "--sha", "--note", "--on", "--as"]);
+const KNOWN_FLAGS = new Set(["--scope", "--parent", "--priority", "--desc", "--by", "--reason", "--keep", "--sha", "--note", "--on", "--as", "--requires"]);
+const CAPS = new Set(CAPABILITIES);
 const pos = (): string[] => {
 	const out: string[] = [];
 	for (let i = 0; i < rest.length; i++) {
@@ -217,9 +218,20 @@ if (cmd === "add") {
 	const scope = arg("--scope");
 	const priority = Number(arg("--priority") ?? 0);
 	const by = arg("--by") ?? "unknown";
+	const requires = arg("--requires");
+	if (requires) {
+		const bad = requires.split(",").filter((c) => !CAPS.has(c.trim()));
+		if (bad.length) die(`unknown capability: ${bad.join(",")} — vocabulary: ${[...CAPS].join(",")}`);
+	}
 	const id = parent ? nextChildId(parent) : nextRootId();
 	if (parent) get(parent);
 	insertItem(id, parent, title, scope, priority, by, arg("--reason"));
+	if (requires)
+		db.query("UPDATE work_items SET requires = ? WHERE project = ? AND id = ?").run(
+			requires.split(",").map((c) => c.trim()).join(","),
+			PROJECT,
+			id,
+		);
 	emit("work.added", id, { scope: scope ?? "" });
 	console.log(`${green("✓")} ${cyan(id)} ${dim("READY")} — ${title}`);
 } else if (cmd === "list" || cmd === "ready") {
@@ -246,7 +258,7 @@ if (cmd === "add") {
 	const it = get(id ?? "");
 	const [g, col] = GLYPH[it.state as string] ?? ["?", dim];
 	console.log(`${col(g)} ${it.id} ${col(it.state as string)}  ${it.title}`);
-	for (const k of ["scope", "owner_sid", "result_sha", "why_parallel", "description"] as const) {
+	for (const k of ["scope", "owner_sid", "result_sha", "why_parallel", "requires", "description"] as const) {
 		if (it[k]) console.log(`  ${dim(`${k}:`)} ${it[k]}`);
 	}
 	const kids = db.query("SELECT * FROM work_items WHERE project = ? AND parent_id = ? ORDER BY id").all(PROJECT, id) as Item[];
@@ -266,6 +278,16 @@ if (cmd === "add") {
 	if (sm.length === 1) as = sm[0].sid;
 	else if (sm.length > 1) die(`ambiguous sid prefix: ${as} — use the full sid`);
 	const it = get(id);
+	// capability-aware dispatch (v2): requires ⊆ capabilities or refuse —
+	// kills the W28/W29-class NO-SHELL dead spawn at the CLI boundary
+	const caps = ((db.query("SELECT capabilities FROM sessions WHERE sid = ?").get(as) as { capabilities: string | null } | null)?.capabilities ?? "")
+		.split(",")
+		.filter(Boolean);
+	const missing = ((it.requires as string | null) ?? "").split(",").filter(Boolean).filter((r) => !caps.includes(r));
+	if (missing.length)
+		die(
+			`${id} requires [${missing.join(",")}] — session ${as.slice(0, 8)} advertises [${caps.join(",") || "none"}] — dispatch to a capable agent`,
+		);
 	if (!depsMet(id)) die(`${id} has unmet dependencies: ${deps(id).filter((d) => d.state !== "DONE").map((d) => d.depends_on).join(", ")}`);
 	// compare-and-set: two lanes racing for the last READY item → exactly one wins
 	const r = db.query("UPDATE work_items SET state = 'CLAIMED', owner_sid = ?, updated_at = ? WHERE project = ? AND id = ? AND state = 'READY'").run(as, Date.now(), PROJECT, id);
