@@ -108,6 +108,11 @@ coord resume <sid> --onto <new-head> --note "applyPreview: (x) → (x, ctx); Med
   coordinator operates on immutable commits, never working dirs
 - `claim doctor` after fleet drains
 
+### Exit invariant (before EXIT)
+- Every actionable item exists as a Work Graph item (READY/BLOCKED) - never only in prose/Markdown; every WIP patch or worktree is referenced by an item
+- Claims released; state preserved in events/capsules; terse EXIT only: head, tree, work, wip, claims
+- A stopped session's items stay owned until rebound or `work reclaim`ed - never silently re-queued
+
 ### Coupling rule
 Deeply coupled work = ONE implementation lane + parallel review/test lanes.
 4 independent lanes > 8 coupled ones.

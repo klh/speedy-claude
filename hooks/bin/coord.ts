@@ -15,6 +15,7 @@
 // poll with --as auto-advances that agent's cursor: communication cost scales
 // with NEW information, never with history.
 import { Database } from "bun:sqlite";
+import { statSync } from "node:fs";
 import { openGovernorDb, projectIdentity } from "../lib/govdb.ts";
 
 interface Ev {
@@ -336,6 +337,7 @@ if (cmd === "emit") {
 	// override, it would let sessions fragment the graph by hand
 	let project = projectIdentity();
 	const role = arg("--role") ?? "worker";
+	sweepStaleSessions();
 	db.query(
 		"INSERT INTO sessions (sid, project, role, parent_sid, worktree, started_at, hb, state) VALUES (?, ?, ?, ?, ?, ?, ?, 'RUNNING') ON CONFLICT(sid) DO UPDATE SET project = excluded.project, role = excluded.role, hb = excluded.hb",
 	).run(as, project, role, arg("--parent"), arg("--worktree") ?? null, Date.now(), Date.now());
@@ -528,7 +530,8 @@ if (cmd === "emit") {
 	// consults: open questions expire after 1h; closed threads age out
 	const x = db.query("UPDATE consults SET state = 'EXPIRED', answered_at = ? WHERE state = 'OPEN' AND created_at < ?").run(Date.now(), Date.now() - 3_600_000).changes;
 	const cd = db.query("DELETE FROM consults WHERE state IN ('ANSWERED','DECLINED','EXPIRED') AND answered_at < ? AND answered_at IS NOT NULL").run(cut).changes;
-	console.log(`gc: ${e} events, ${s} closed sessions, ${c} stale cursors, ${f} lane facts, ${x} consults expired, ${cd} consult threads pruned (>${days}d; work ledger untouched)`);
+	const sw = sweepStaleSessions();
+	console.log(`gc: ${e} events, ${s} closed sessions, ${sw} stale RUNNING sessions swept, ${c} stale cursors, ${f} lane facts, ${x} consults expired, ${cd} consult threads pruned (>${days}d; work ledger untouched)`);
 } else {
 	die("unknown command — try emit | poll | wait | fact | bootstrap | state | inbox | capsule | pause | paused | resume | resumed | resume-session | doctor-session | who-knows | consult | consult-reply | consults | gc | fleet");
 }
@@ -538,6 +541,37 @@ function scopeCovers(a: string, b: string): boolean {
 	const pa = a.replace(/\/\*\*?$/, "");
 	const pb = b.replace(/\/\*\*?$/, "");
 	return pa !== a && (b.startsWith(`${pa}/`) || b === pa);
+}
+
+// liveness sweep: RUNNING + heartbeat stale + NO live transcript = a process
+// that died without SessionEnd. hb alone is not evidence — it only updates on
+// bootstrap — but an active session writes its transcript continuously, so
+// transcript-dead is the real signal. Swept sessions keep owned work: the
+// next SessionStart(resume) rebinds it or `work orphaned` surfaces it.
+function sweepStaleSessions(maxIdleMs = 20 * 60_000): number {
+	const cut = Date.now() - maxIdleMs;
+	const rows = db.query("SELECT sid FROM sessions WHERE state = 'RUNNING' AND hb < ?").all(cut) as { sid: string }[];
+	let n = 0;
+	for (const r of rows) {
+		if (liveTranscript(r.sid)) continue;
+		db.query("UPDATE sessions SET state = 'CLOSED' WHERE sid = ? AND state = 'RUNNING'").run(r.sid);
+		n++;
+	}
+	return n;
+}
+
+function liveTranscript(sid: string): boolean {
+	const floor = Date.now() - 15 * 60_000;
+	try {
+		const glob = new Bun.Glob(`**/*${sid}*.jsonl`);
+		for (const rel of glob.scanSync({ cwd: `${process.env.HOME}/.claude/projects`, onlyFiles: true })) {
+			const f = `${process.env.HOME}/.claude/projects/${rel}`;
+			try {
+				if (statSync(f).mtimeMs > floor) return true;
+			} catch {}
+		}
+	} catch {}
+	return false;
 }
 
 // contextual expertise ranking for who-knows / consult --best. Score =
