@@ -258,8 +258,13 @@ if (cmd === "add") {
 	if (d.length) console.log(dim(`  depends on: ${d.map((x) => `${x.depends_on}(${x.state ?? "?"})`).join(", ")}`));
 } else if (cmd === "take") {
 	const id = pos()[0];
-	const as = arg("--as");
+	let as = arg("--as");
 	if (!id || !as) die("usage: take <id> --as <sid>");
+	// truncated-sid guard: a display slice (e.g. 'visual-c') must not become
+	// the owner of record — expand a unique session-sid prefix to the full sid
+	const sm = db.query("SELECT sid FROM sessions WHERE sid LIKE ? || '%'").all(as) as { sid: string }[];
+	if (sm.length === 1) as = sm[0].sid;
+	else if (sm.length > 1) die(`ambiguous sid prefix: ${as} — use the full sid`);
 	const it = get(id);
 	if (!depsMet(id)) die(`${id} has unmet dependencies: ${deps(id).filter((d) => d.state !== "DONE").map((d) => d.depends_on).join(", ")}`);
 	// compare-and-set: two lanes racing for the last READY item → exactly one wins
