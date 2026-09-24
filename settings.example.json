@@ -96,6 +96,20 @@
           {
             "type": "command",
             "command": "bash $HOME/.claude/hooks/session-start.sh"
+          },
+          {
+            "type": "command",
+            "command": "bun $HOME/.claude/hooks/session-start.ts"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun $HOME/.claude/hooks/session-end.ts"
           }
         ]
       }

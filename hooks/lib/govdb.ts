@@ -5,9 +5,24 @@
 // journal_mode: under contention the connection waits instead of throwing;
 // WAL is persistent once set and verified on open.
 import { Database } from "bun:sqlite";
-import { existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync } from "node:fs";
+import { resolve } from "node:path";
 
 const REG = `${process.env.HOME}/.cache/claude-governor`;
+
+// one project identity for the whole control plane: realpath of the repo's
+// COMMON git dir — every worktree of one repo shares one Work Graph, and
+// work.ts / coord.ts bootstrap / a future consult layer can never disagree
+export function projectIdentity(): string {
+	try {
+		const r = Bun.spawnSync(["git", "-C", process.cwd(), "rev-parse", "--git-common-dir"], { stdout: "pipe", stderr: "pipe" });
+		if (r.exitCode === 0) {
+			const dir = new TextDecoder().decode(r.stdout).trim();
+			if (dir) return realpathSync(resolve(process.cwd(), dir));
+		}
+	} catch {}
+	return realpathSync(process.cwd());
+}
 
 export function openGovernorDb(): Database {
 	mkdirSync(REG, { recursive: true });
@@ -21,6 +36,10 @@ export function openGovernorDb(): Database {
 	}
 	db.run("PRAGMA synchronous=NORMAL");
 	db.run("PRAGMA foreign_keys=ON"); // composite FKs guard work_deps against cross-project/orphan edges
+	// schema versioning via PRAGMA user_version: baseline 1 = composite-PK work
+	// graph. Future migrations must be explicit steps (v1→v2), never inferred.
+	const uv = (db.query("PRAGMA user_version").get() as { user_version: number }).user_version;
+	if (uv < 1) db.run("PRAGMA user_version = 1");
 	db.run(
 		"CREATE TABLE IF NOT EXISTS claims (sid TEXT NOT NULL, scope TEXT NOT NULL, intent TEXT, hot INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL, tp TEXT, PRIMARY KEY (sid, scope))",
 	);
@@ -55,6 +74,7 @@ export function openGovernorDb(): Database {
 	db.run(
 		"CREATE TABLE IF NOT EXISTS work_deps (project TEXT NOT NULL, work_id TEXT NOT NULL, depends_on TEXT NOT NULL, PRIMARY KEY (project, work_id, depends_on), FOREIGN KEY (project, work_id) REFERENCES work_items(project, id) ON DELETE CASCADE, FOREIGN KEY (project, depends_on) REFERENCES work_items(project, id) ON DELETE CASCADE)",
 	);
+	db.run("CREATE TABLE IF NOT EXISTS work_sequences (project TEXT PRIMARY KEY, next_id INTEGER NOT NULL)");
 	// session registry (coord bootstrap): who exists, where, doing what role
 	db.run(
 		"CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, project TEXT, role TEXT, parent_sid TEXT, worktree TEXT, started_at INTEGER NOT NULL, hb INTEGER NOT NULL, state TEXT NOT NULL DEFAULT 'RUNNING')",

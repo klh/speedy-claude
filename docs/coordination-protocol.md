@@ -84,6 +84,17 @@ coord resume <sid> --onto <new-head> --note "applyPreview: (x) → (x, ctx); Med
 - PAUSE intends to continue this exact lane (capsule kept); STOP supersedes it (commits/facts remain, capsule dropped).
 - resume_ready carries the delta summary — the lane updates its worktree onto the new integration HEAD, reruns targeted tests, continues. Reconciliation conflict → repair path.
 
+### Work Graph (operational state lives here — never in Markdown)
+- Session start: `coord bootstrap --as <sid> --role coordinator|worker` → identity + OWNED + READY pool + inbox + head
+- Register active/blocked/queued work: `work add <title> --scope <scope> --by <sid>` — the graph is partitioned per project (repo root)
+- Take before implementing: `work take <id> --as <sid>` (CAS; a lost race is informational — pick another)
+- Parallelizable? `work split <id> "t1" "t2" ... --reason independent-scopes --keep 1` — splitter keeps one child; idle lanes take from `work ready`
+- Progress: `work done <id> --sha <sha>` — SHATTERED parents roll up automatically; scope claim auto-releases
+- Ownership: `work mine --as <sid>` / `work owned` · stale owner: `work orphaned` → inspect capsule → `work reclaim <id>`
+- Restart: `claude -c` auto-rebinds ownership on SessionStart (resume); verify with `coord doctor-session <sid>` - no live state may point at a closed predecessor
+- Spawn gate: READY work exists + fleet under target + rate headroom + acceptable coupling -> spawn; high coupling = review/test lanes, never more implementation lanes
+- Markdown carries architecture/spec/decisions only — never live task state
+
 ### Claims
 - Every lane registers via `claim add <sid> <scope...> --intent "..."` at
   spawn; shared areas get BOTH lanes' claims; hot-mark only after an observed

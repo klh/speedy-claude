@@ -21,10 +21,9 @@
 //   work block <id> --on <id2>           / work unblock <id> --on <id2>   (cycle-checked)
 //   work supersede <id> --by <new-id>
 //   work orphaned                        / work reclaim <id>
-import { existsSync, realpathSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, statSync } from "node:fs";
 import { Database } from "bun:sqlite";
-import { openGovernorDb } from "../lib/govdb.ts";
+import { openGovernorDb, projectIdentity } from "../lib/govdb.ts";
 
 const die = (m: string): never => {
 	console.error(`work: ${m}`);
@@ -38,19 +37,9 @@ const arg = (name: string): string | null => {
 	return i >= 0 ? (rest[i + 1] ?? null) : null;
 };
 
-// project partitioning: identity is the repo's COMMON git dir (realpathed),
-// so every worktree of one repo shares one graph; non-git dirs fall back to cwd
-function currentProject(): string {
-	try {
-		const r = Bun.spawnSync(["git", "-C", process.cwd(), "rev-parse", "--git-common-dir"], { stdout: "pipe", stderr: "pipe" });
-		if (r.exitCode === 0) {
-			const dir = new TextDecoder().decode(r.stdout).trim();
-			if (dir) return realpathSync(resolve(process.cwd(), dir));
-		}
-	} catch {}
-	return process.cwd();
-}
-const PROJECT = currentProject();
+// project partitioning: shared identity from govdb (repo's common git dir) —
+// sessions in different projects never see or steal each other's work
+const PROJECT = projectIdentity();
 
 const tty = process.stdout.isTTY && !process.env.NO_COLOR;
 const paint =
@@ -146,9 +135,16 @@ function nextChildId(parent: string): string {
 }
 
 function nextRootId(): string {
-	// strip the W before casting — CAST('W12' AS INTEGER) is 0 in SQLite
-	const r = (db.query("SELECT MAX(CAST(SUBSTR(id, 2) AS INTEGER)) AS m FROM work_items WHERE project = ? AND id GLOB 'W[0-9]*' AND id NOT LIKE '%.%'").get(PROJECT) as { m: number | null }).m;
-	return `W${(r ?? 0) + 1}`;
+	// atomic per-project allocation: one upsert statement is the allocator, so
+	// concurrent `work add` races each get a distinct id instead of one losing
+	// to a UNIQUE error. Seeds from existing max, then increments.
+	const tx = db.transaction(() => {
+		db.query(
+			"INSERT INTO work_sequences (project, next_id) SELECT ?, COALESCE(MAX(CAST(SUBSTR(id, 2) AS INTEGER)), 0) + 1 FROM work_items WHERE project = ? AND id GLOB 'W[0-9]*' AND id NOT LIKE '%.%' ON CONFLICT(project) DO UPDATE SET next_id = next_id + 1",
+		).run(PROJECT, PROJECT);
+		return (db.query("SELECT next_id FROM work_sequences WHERE project = ?").get(PROJECT) as { next_id: number }).next_id;
+	});
+	return `W${tx()}`;
 }
 
 function insertItem(id: string, parentId: string | null, title: string, scope: string | null, priority: number, by: string, why: string | null): void {

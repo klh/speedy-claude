@@ -15,7 +15,7 @@
 // poll with --as auto-advances that agent's cursor: communication cost scales
 // with NEW information, never with history.
 import { Database } from "bun:sqlite";
-import { openGovernorDb } from "../lib/govdb.ts";
+import { openGovernorDb, projectIdentity } from "../lib/govdb.ts";
 
 interface Ev {
 	id: number;
@@ -323,6 +323,26 @@ if (cmd === "emit") {
 		}[];
 		console.log(rows.length ? rows.map((r) => `${r.key} = ${r.value}  (v${r.version})`).join("\n") : "(no facts)");
 	} else die("usage: fact set <key> <value> | fact get <key> | fact list");
+} else if (cmd === "bootstrap") {
+	// the session-start ritual: identity + owned work + ready pool + inbox,
+	// so no session reconstructs operational state from Markdown
+	const as = arg("--as") ?? die("usage: bootstrap --as <sid> [--project p] [--role r] [--parent sid] [--worktree w]");
+	// project identity is always derived (projectIdentity) — no --project
+	// override, it would let sessions fragment the graph by hand
+	let project = projectIdentity();
+	const role = arg("--role") ?? "worker";
+	db.query(
+		"INSERT INTO sessions (sid, project, role, parent_sid, worktree, started_at, hb, state) VALUES (?, ?, ?, ?, ?, ?, ?, 'RUNNING') ON CONFLICT(sid) DO UPDATE SET project = excluded.project, role = excluded.role, hb = excluded.hb",
+	).run(as, project, role, arg("--parent"), arg("--worktree") ?? null, Date.now(), Date.now());
+	const mine = db.query("SELECT id, title, state FROM work_items WHERE project = ? AND owner_sid = ? AND state NOT IN ('DONE','SUPERSEDED') ORDER BY id").all(project, as) as { id: string; title: string; state: string }[];
+	const readyN = (db.query("SELECT COUNT(*) AS n FROM work_items WHERE project = ? AND state = 'READY'").get(project) as { n: number }).n;
+	const ncur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(as) as { event_id: number } | null)?.event_id ?? 0;
+	const inbox = (db.query("SELECT COUNT(*) AS n FROM events WHERE target = ? AND id > ?").get(as, ncur) as { n: number }).n;
+	const head = (db.query("SELECT value FROM facts WHERE key = 'integration.head'").get() as { value: string } | null)?.value;
+	const pname = project.split("/").pop()?.replace(/\.git$/, "") || project.split("/").slice(-2, -1).pop() || project;
+	console.log(`SESSION ${as.slice(0, 8)}  project=${pname}  role=${role}`);
+	console.log(`OWNED ${mine.length}${mine.length ? `: ${mine.map((w) => `${w.id} ${w.state}`).join(", ")}` : ""}  READY ${readyN}  INBOX ${inbox}${head ? `  head=${head.slice(0, 7)}` : ""}`);
+	for (const w of mine) console.log(`  ${cyan(w.id)} ${dim(w.state)} ${w.title.slice(0, 60)}`);
 } else if (cmd === "fleet") {
 	// one-line fleet projection for a terminal pane (the Desktop panel
 	// projection lives in subagent-statusline.ts; the CLI inline rows are
@@ -343,8 +363,77 @@ if (cmd === "emit") {
 		return `${g} ${dim(names.get(l) ?? l.slice(0, 8))}`;
 	});
 	console.log(`${head ? `${dim(`@${head.slice(0, 7)}`)}  ` : ""}${parts.join("  ") || dim("(no claimed lanes)")}`);
+} else if (cmd === "resume-session") {
+	// ownership rebind for `claude -c` continuations: the runtime hands the
+	// resumed session a fresh id — move ownership forward atomically so the
+	// session wakes owning what it owned before (never re-derive from Markdown)
+	const as = arg("--as");
+	const from = arg("--from");
+	if (!as || !from || as === from) die("usage: resume-session --as <new-sid> --from <old-sid>");
+	const old = db.query("SELECT project, role, worktree FROM sessions WHERE sid = ?").get(from) as { project: string | null; role: string | null; worktree: string | null } | undefined;
+	if (!old) die(`no known session: ${from} — nothing to rebind`);
+	const proj = old.project ?? projectIdentity();
+	const now = Date.now();
+	let wMoved = 0;
+	let cMoved = 0;
+	let fMoved = 0;
+	let eMoved = 0;
+	db.transaction(() => {
+		wMoved = db.query("UPDATE work_items SET owner_sid = ?, updated_at = ? WHERE project = ? AND owner_sid = ? AND state NOT IN ('DONE','SUPERSEDED','FAILED')").run(as, now, proj, from).changes;
+		cMoved = db.query("INSERT INTO claims (sid, scope, intent, hot, ts, tp) SELECT ?, scope, intent, hot, ts, tp FROM claims WHERE sid = ? ON CONFLICT DO NOTHING").run(as, from).changes;
+		db.query("DELETE FROM claims WHERE sid = ?").run(from);
+		const facts = db.query("SELECT key FROM facts WHERE key LIKE ?").all(`lane.${from}.%`) as { key: string }[];
+		for (const f of facts) {
+			const nk = f.key.replace(`lane.${from}.`, `lane.${as}.`);
+			db.query("INSERT INTO facts (key, value, source, version, ts) SELECT ?, value, source, version + 1, ? FROM facts WHERE key = ? ON CONFLICT(key) DO UPDATE SET value = excluded.value, ts = excluded.ts").run(nk, now, f.key);
+			db.query("DELETE FROM facts WHERE key = ?").run(f.key);
+			fMoved++;
+		}
+		// unconsumed directed events follow the inbox: everything past the old
+		// cursor re-targets the new sid, so pending messages aren't stranded
+		const oldCur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(from) as { event_id: number } | null)?.event_id ?? 0;
+		eMoved = db.query("UPDATE events SET target = ? WHERE target = ? AND id > ?").run(as, from, oldCur).changes;
+		const cur = db.query("SELECT event_id FROM cursors WHERE sid = ?").get(from) as { event_id: number } | null;
+		if (cur && !db.query("SELECT 1 FROM cursors WHERE sid = ?").get(as)) db.query("INSERT INTO cursors (sid, event_id) VALUES (?, ?)").run(as, cur.event_id);
+		db.query("UPDATE sessions SET state = 'CLOSED', hb = ? WHERE sid = ?").run(now, from);
+		db.query(
+			"INSERT INTO sessions (sid, project, role, parent_sid, worktree, started_at, hb, state) VALUES (?, ?, ?, ?, ?, ?, ?, 'RUNNING') ON CONFLICT(sid) DO UPDATE SET project = excluded.project, role = excluded.role, parent_sid = excluded.parent_sid, worktree = excluded.worktree, hb = excluded.hb, state = 'RUNNING'",
+		).run(as, proj, old.role ?? "worker", from, old.worktree, now, now);
+	})();
+	console.log(`✓ ${from.slice(0, 8)} → ${as.slice(0, 8)}  work:${wMoved} claims:${cMoved} facts:${fMoved} events:${eMoved} (cursor carried, ${from.slice(0, 8)} CLOSED)`);
+} else if (cmd === "doctor-session") {
+	// rebind integrity: NO live coordination state may point at a closed
+	// predecessor — everything here should be zero after resume-session
+	const sid = rest[0];
+	if (!sid) die("usage: doctor-session <sid>");
+	const s = db.query("SELECT project, parent_sid FROM sessions WHERE sid = ?").get(sid) as { project: string | null; parent_sid: string | null } | undefined;
+	if (!s) die(`no session: ${sid}`);
+	const issues: string[] = [];
+	const old = s.parent_sid;
+	if (old) {
+		const w = (db.query("SELECT COUNT(*) AS n FROM work_items WHERE project = ? AND owner_sid = ? AND state NOT IN ('DONE','SUPERSEDED','FAILED')").get(s.project, old) as { n: number }).n;
+		if (w) issues.push(`${w} work items still owned by ${old.slice(0, 8)}`);
+		const c = (db.query("SELECT COUNT(*) AS n FROM claims WHERE sid = ?").get(old) as { n: number }).n;
+		if (c) issues.push(`${c} claims still on ${old.slice(0, 8)}`);
+		const ncur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(sid) as { event_id: number } | null)?.event_id ?? 0;
+		const e = (db.query("SELECT COUNT(*) AS n FROM events WHERE target = ? AND id > ?").get(old, ncur) as { n: number }).n;
+		if (e) issues.push(`${e} unconsumed events still addressed to ${old.slice(0, 8)}`);
+		const f = (db.query("SELECT COUNT(*) AS n FROM facts WHERE key LIKE ?").get(`lane.${old}.%`) as { n: number }).n;
+		if (f) issues.push(`${f} lane facts still keyed ${old.slice(0, 8)}`);
+	}
+	console.log(issues.length ? `RESIDUE ${sid.slice(0, 8)}: ${issues.join("; ")}` : `✓ ${sid.slice(0, 8)} clean${old ? ` (lineage ${old.slice(0, 8)})` : ""}`);
+} else if (cmd === "gc") {
+	// retention: events + closed sessions + their cursors age out; terminal
+	// work items are the ledger and are NEVER auto-deleted
+	const days = Number(arg("--days") ?? 30);
+	const cut = Date.now() - days * 86_400_000;
+	const e = db.query("DELETE FROM events WHERE ts < ?").run(cut).changes;
+	const s = db.query("DELETE FROM sessions WHERE state = 'CLOSED' AND hb < ?").run(cut).changes;
+	const c = db.query("DELETE FROM cursors WHERE sid NOT IN (SELECT sid FROM sessions)").run().changes;
+	const f = db.query("DELETE FROM facts WHERE key LIKE 'lane.%' AND ts < ?").run(cut).changes;
+	console.log(`gc: ${e} events, ${s} closed sessions, ${c} stale cursors, ${f} lane facts pruned (>${days}d; work ledger untouched)`);
 } else {
-	die("unknown command — try emit | poll | wait | fact | fleet");
+	die("unknown command — try emit | poll | wait | fact | bootstrap | state | inbox | capsule | pause | paused | resume | resumed | resume-session | doctor-session | gc | fleet");
 }
 
 function scopeCovers(a: string, b: string): boolean {
