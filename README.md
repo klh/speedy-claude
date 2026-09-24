@@ -102,7 +102,10 @@ architecture review): **isolate execution, serialize only integration.**
 | Lane output | Checkpoint commits every 10–20 min; lanes report `{base SHA, commit SHA, changed paths, test status}` — the coordinator operates on immutable commits, never working dirs |
 
 The one rule that matters most: **a lane being green is not sufficient — the
-lane merged onto the current integration HEAD must be green.** Deliberately
+lane merged onto the current integration HEAD must be green.** Coordinator
+output is **delta-only**: emit state changes (MERGED / SPAWNED / ALERT / EXIT),
+suppress unchanged state and passing-test detail — the bus holds the details,
+prose is for failures and decisions. Deliberately
 NOT built (over-engineering at local scale): semantic MVCC, symbol-version
 ownership, AST merge, distributed lock managers, a message broker (NATS is the
 upgrade path if lanes ever go multi-machine). If finer control is ever needed,
