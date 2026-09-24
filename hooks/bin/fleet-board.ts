@@ -116,6 +116,26 @@ function inbox(sid: string): unknown[] {
 		.map((e: any) => ({ id: e.id, tsAgo: ago(e.ts), source: e.source, kind: e.kind, note: e.payload }));
 }
 
+function needsMap(): Record<string, { id: number; tsAgo: number; source: string; note: string }[]> {
+	const out: Record<string, { id: number; tsAgo: number; source: string; note: string }[]> = {};
+	for (const s of db.query("SELECT sid FROM sessions").all() as { sid: string }[]) {
+		const cur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(s.sid) as { event_id: number } | null)?.event_id ?? 0;
+		for (const e of db
+			.query("SELECT id, ts, source, payload FROM events WHERE target = ? AND id > ? AND kind LIKE 'NEED%' ORDER BY id")
+			.all(s.sid, cur) as any[]) {
+			let note = "";
+			try {
+				const p = e.payload ? JSON.parse(e.payload) : {};
+				note = String(p.note ?? p.question ?? e.payload ?? "");
+			} catch {
+				note = String(e.payload ?? "");
+			}
+			(out[s.sid] ??= []).push({ id: e.id, tsAgo: ago(e.ts), source: e.source, note });
+		}
+	}
+	return out;
+}
+
 function payload(): unknown {
 	const ss = sessions();
 	const labels: Record<string, string> = {};
@@ -130,6 +150,7 @@ function payload(): unknown {
 		projects: board(),
 		claims: claims(),
 		events: events(),
+		needs: needsMap(),
 	};
 }
 
@@ -156,6 +177,17 @@ header .mark { font-size:13px; font-weight:600; letter-spacing:.08em; }
 header .right { margin-left:auto; display:flex; align-items:center; gap:12px; }
 #stamp { font-size:11px; color:#8a8781; font-variant-numeric:tabular-nums; }
 #blockedn { color:#af2f12; font-size:11px; font-variant-numeric:tabular-nums; }
+#needsn { color:#af2f12; font-size:11px; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+.card.need { border-color:#af2f12; box-shadow:0 0 0 1px #af2f12; cursor:pointer; }
+.card.need .m { color:#c96a4f; }
+#needsPanel { display:none; position:fixed; top:64px; right:20px; width:min(520px,90vw); background:#1c1b19; border:1px solid #af2f12; border-radius:2px; padding:14px 16px; z-index:10; max-height:70vh; overflow:auto; }
+#needsPanel h2 { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:#af2f12; margin:0 0 10px; display:flex; justify-content:space-between; }
+#needsPanel h2 span { cursor:pointer; color:#8a8781; }
+#needsPanel .q { margin-bottom:12px; }
+#needsPanel .q .who { font-size:11px; color:#8a8781; margin-bottom:2px; }
+#needsPanel .q .txt { font-size:12px; margin-bottom:4px; word-break:break-word; }
+#needsPanel .q .cmd { font-size:10px; color:#d8900f; cursor:pointer; word-break:break-all; }
+#needsPanel .q .cmd:hover { text-decoration:underline; }
 select { background:#1c1b19; color:#e8e6e1; border:1px solid rgba(255,255,255,.12); border-radius:2px; padding:3px 8px; font:11px ui-monospace,Menlo,monospace; max-width:380px; }
 #wrap { display:flex; gap:24px; align-items:flex-start; }
 #board { flex:1; display:grid; grid-template-columns:repeat(3,minmax(240px,1fr)); gap:12px; align-content:start; overflow-x:auto; }
@@ -187,6 +219,7 @@ select { background:#1c1b19; color:#e8e6e1; border:1px solid rgba(255,255,255,.1
   <div class="right">
     <span id="stamp"></span>
     <span id="blockedn"></span>
+    <span id="needsn"></span>
     <select id="sess"><option value="">— all —</option></select>
   </div>
 </header>
@@ -197,10 +230,12 @@ select { background:#1c1b19; color:#e8e6e1; border:1px solid rgba(255,255,255,.1
     <div class="feed"><h2>Event tail</h2><div id="events"></div></div>
   </div>
 </div>
+<div id="needsPanel"><h2>NEEDS YOUR ANSWER <span id="nClose">✕ close</span></h2><div id="nList"></div></div>
 <script>
 var sel = document.getElementById('sess');
 var sessLoaded = false;
 var prev = {};
+var lastData = null;
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function pill(state){
   if (state==='CLAIMED'||state==='RUNNING') return '<span class="pill run">' + state.toLowerCase() + '</span>';
@@ -208,23 +243,26 @@ function pill(state){
   if (state==='BLOCKED'||state==='PAUSED'||state==='FAILED') return '<span class="pill block">' + state.toLowerCase() + '</span>';
   return '';
 }
-function card(w, focus, L){
+function card(w, focus, L, N){
   var key = w.id+'|'+w.state+'|'+(w.owner||'')+'|'+(w.sha||'');
   var changed = prev[w.id] !== undefined && prev[w.id] !== key;
   prev[w.id] = key;
   var mine = focus && w.owner === focus;
   var gated = (w.blocked && w.state==='READY') || w.state==='BLOCKED' || w.state==='PAUSED';
-  var cls = 'card' + (mine?' mine':'') + (changed?' flash':'') + (gated?' gated':'');
-  var m = esc(w.owner ? (L[w.owner] || w.owner.slice(0,10)) : '—') + ' · ' + (w.updatedAgo>=0 ? w.updatedAgo+'s' : '');
+  var needsIt = w.owner && N[w.owner] && N[w.owner].length;
+  var cls = 'card' + (mine?' mine':'') + (changed?' flash':'') + (gated?' gated':'') + (needsIt?' need':'');
+  var m = esc(w.owner ? (L[w.owner] || w.owner.slice(0,10)) : 'unclaimed') + ' · ' + (w.updatedAgo>=0 ? w.updatedAgo+'s' : '');
   if (w.sha) m += ' · @' + esc(String(w.sha).slice(0,7));
-  return '<div class="' + cls + '"><span class="id">' + esc(w.id) + '</span>' + pill(w.state) + '<div class="t">' + esc(w.title).slice(0,90) + '</div><div class="m">' + m + '</div></div>';
+  return '<div class="' + cls + '"' + (needsIt ? ' onclick="openNeeds(\'' + w.owner + '\')"' : '') + '><span class="id">' + esc(w.id) + '</span>' + pill(w.state) + '<div class="t">' + esc(w.title).slice(0,90) + '</div><div class="m">' + m + '</div></div>';
 }
 function render(d) {
+  lastData = d;
   if (!sessLoaded) {
     for (var i = 0; i < d.sessions.length; i++) {
       var s = d.sessions[i];
       var o = document.createElement('option');
-      o.value = s.sid; o.textContent = s.label + ' · ' + s.role + ' · ' + s.state;
+      var flagged = d.needs && d.needs[s.sid] && d.needs[s.sid].length;
+      o.value = s.sid; o.textContent = s.label + ' · ' + s.role + ' · ' + s.state + (flagged ? '  ⚑ NEEDS ANSWER' : '');
       sel.appendChild(o);
     }
     sessLoaded = true;
@@ -239,16 +277,20 @@ function render(d) {
   for (var c = 0; c < cols.length; c++) {
     html += '<div class="col"><h2>' + cols[c][0] + '</h2>';
     for (var p = 0; p < proj.length; p++) {
-      var list = proj[p][cols[c][1]];
+      var list = proj[p][cols[c][1]].concat(cols[c][1] === 'todo' ? proj[p].gated : []);
       blocked += proj[p].gated.length;
       if (proj.length > 1) html += '<div class="m">' + esc(proj[p].name) + '</div>';
-      for (var k = 0; k < list.length; k++) html += card(list[k], focus, d.labels);
+      for (var k = 0; k < list.length; k++) html += card(list[k], focus, d.labels, d.needs || {});
     }
     html += '</div>';
   }
   document.getElementById('board').innerHTML = html;
   document.getElementById('stamp').textContent = 'updated ' + Math.max(0, Math.round((Date.now() - d.ts)/1000)) + 's ago';
   document.getElementById('blockedn').textContent = blocked ? blocked + ' blocked' : '';
+  var nN = 0; for (var s2 in (d.needs||{})) nN += d.needs[s2].length;
+  var nn = document.getElementById('needsn');
+  nn.textContent = nN ? nN + ' need your answer' : '';
+  nn.onclick = function(){ openNeeds(null); };
   var cl = '';
   for (var i = 0; i < d.claims.length; i++) {
     var x = d.claims[i];
@@ -262,6 +304,28 @@ function render(d) {
   }
   document.getElementById('events').innerHTML = ev;
 }
+function openNeeds(sid) {
+  var d = lastData; if (!d) return;
+  var needs = d.needs || {};
+  var rows = '';
+  for (var s in needs) {
+    if (sid && s !== sid) continue;
+    for (var i = 0; i < needs[s].length; i++) {
+      var n = needs[s][i];
+      var cmd = 'bun ~/.claude/bin/coord.ts emit ANSWER --to ' + n.source + ' --note "<your answer>"';
+      rows += '<div class="q"><div class="who">' + esc(d.labels[s] || s.slice(0,10)) + ' · asked · ' + n.tsAgo + 's ago · event #' + n.id + '</div><div class="txt">' + esc(n.note || '(no note)') + '</div><div class="cmd" onclick="copyCmd(this)">' + esc(cmd) + '</div></div>';
+    }
+  }
+  document.getElementById('nList').innerHTML = rows || '<div class="q"><div class="txt">nothing waiting</div></div>';
+  document.getElementById('needsPanel').style.display = 'block';
+}
+function copyCmd(el) {
+  if (navigator.clipboard) navigator.clipboard.writeText(el.textContent);
+  var old = el.textContent; el.textContent = 'copied ✓';
+  setTimeout(function(){ el.textContent = old; }, 900);
+}
+document.getElementById('nClose').onclick = function(){ document.getElementById('needsPanel').style.display = 'none'; };
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') document.getElementById('needsPanel').style.display = 'none'; });
 function tick() {
   fetch('/api/data?session=' + encodeURIComponent(sel.value)).then(function(r){return r.json();}).then(render).catch(function(){});
 }
