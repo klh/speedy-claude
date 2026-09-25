@@ -38,6 +38,7 @@ bun ~/.claude/bin/coord.ts emit landed --scope <scope> --sha <sha> --as <sid>
 - **Direct messages are interrupts-only**: STOP, CONFLICT, DEPENDENCY_CHANGED,
 - **Transport guarantees**: `coord` events/inbox are the guaranteed unattended path; native cross-session messaging is permission-mode sensitive (may queue for human approval) - opportunistic only. Retired ledgers become tombstone files pointing at the Work Graph; never append operational state to them.
   NEED_DECISION. Everything else is a `coord` event/fact.
+- **Cross-project traffic**: the bus is shared across repos — every `work.*` and `coord emit` payload carries `project`. Work numbering and shas only resolve inside their own repo; a coordinator filters foreign `work.*` / sha-bearing events by `payload.project` and verifies shas against THAT repo, never its own.
 
 ### Lane completion reports (delta-only, one source of truth)
 The machine event IS the report — the coordinator renders prose from it:

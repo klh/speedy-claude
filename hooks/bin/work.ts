@@ -118,7 +118,7 @@ function setState(id: string, state: string, owner?: string | null, sha?: string
 function emit(kind: string, id: string, extra: Record<string, string> = {}, source = "work"): void {
 	db.query(
 		"INSERT INTO events (ts, source, kind, scope, payload, target) SELECT ?, ?, ?, scope, ?, NULL FROM work_items WHERE project = ? AND id = ?",
-	).run(Date.now(), source, kind, JSON.stringify({ work: id, ...extra }), PROJECT, id);
+	).run(Date.now(), source, kind, JSON.stringify({ work: id, project: PROJECT, ...extra }), PROJECT, id);
 }
 
 function deps(id: string): { depends_on: string; state: string | null }[] {

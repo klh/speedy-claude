@@ -71,7 +71,9 @@ if (cmd === "emit") {
 		const m = /^--([\w-]+)=(.+)$/.exec(t);
 		if (m && !["scope", "sha", "note", "as", "to"].includes(m[1])) extra[m[1]] = m[2];
 	}
-	const payload = JSON.stringify({ ...(sha ? { sha } : {}), ...(note ? { note } : {}), ...extra });
+	// project attribution: the bus is shared across projects — consumers filter
+	// work.*/sha-bearing events by this (a sha only resolves in its own repo)
+	const payload = JSON.stringify({ project: projectIdentity(), ...(sha ? { sha } : {}), ...(note ? { note } : {}), ...extra });
 	db.query("INSERT INTO events (ts, source, kind, scope, payload, target) VALUES (?, ?, ?, ?, ?, ?)").run(
 		Date.now(),
 		source,
