@@ -88,22 +88,22 @@ Register via `settings.example.json`.
 For N coding lanes on one machine (learned from a 9-lane session + a fleet-wide
 architecture review): **isolate execution, serialize only integration.**
 
-| Layer | Mechanism |
-| ----- | --------- |
-| Execution isolation | One git worktree per lane — agents never share a mutable filesystem |
-| Write arbitration | Governor edit-leases (`locks` table): first-touch per file, content-hash versioning (external-write detector), single-statement reads/writes — WAL arbitrates concurrent gate processes, no lost-update window |
-| Area claims | `claims` table driven by a terse claim CLI — coarse scopes (`src/auth`) with `intent`; cross-area touches are **drift-logged** (soft) or **denied** (only hot areas); claims validated against live session transcripts (fabricated ids refused) |
-| Event bus | `coord emit / poll / wait / fact` — agents share state **by reference** (structured events, per-agent cursors, versioned facts), never by retelling prose; `wait` is an adaptive long-poll (250ms → 2s backoff, instant wake on events). SendMessage stays reserved for interrupts |
-| Liveness | Leases expire when quiet 15 min **and** the owner's transcript is dead — a lane in one long tool call never loses its lease mid-work; claim heartbeats are single-statement UPDATEs on the same DB |
-| Keepwarm | `llm-keepwarm.ts` + launchd every 4 min: a 1-token **nonce** ping per resident specialist (a cache HIT would skip the forward pass and leave weights paged out) — kills the 27–50s idle-paging first-touch stall |
-| Capability dispatch | `requires` on work items ⊆ `capabilities` on sessions (csv; lanes inherit the parent's) — `work take` refuses mismatches, so a no-shell agent type can never be handed shell work twice |
-| Zombie detection | Three-state monitor (ZOMBIE = hb + transcript both stale; SUSPECT = one; lookup failure = UNKNOWN, never death) on a 15-min launchd — alerts the canonical coordinator (`fact coordinator.sid`), never auto-reclaims; WAIT_RATE/PAUSED lanes are expected-silent |
-| Usage windows | `quota-window.ts` remembers observed 429 resets (5h cliffs) — dispatch defers around the cliff, and the degradation path is the local LLM stack keeping lanes crawling through blackouts instead of dying |
-| Fleet board | `fleet` (bin/fleet.ts): read-only live dashboard on 127.0.0.1:7799 — every session, per-project boards, and a NEEDS-YOUR-ANSWER panel surfacing `NEED_DECISION` events with inline owner answers |
-| Early conflict warning | `git merge-tree --write-tree <head> <lane>` — pure three-way merge simulation, no working-tree mutation, run between overlapping lanes' checkpoints |
-| Integration spine | One integration worktree; lane commits merge onto the integration HEAD, **qlty runs on the merged state**, green advances HEAD |
-| Repair | Conflicts go to a small repair agent in a disposable worktree — never wake both origin lanes |
-| Lane output | Checkpoint commits every 10–20 min; lanes report `{base SHA, commit SHA, changed paths, test status}` — the coordinator operates on immutable commits, never working dirs |
+| Layer                  | Mechanism                                                                                                                                                                                                                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Execution isolation    | One git worktree per lane — agents never share a mutable filesystem                                                                                                                                                                                                                |
+| Write arbitration      | Governor edit-leases (`locks` table): first-touch per file, content-hash versioning (external-write detector), single-statement reads/writes — WAL arbitrates concurrent gate processes, no lost-update window                                                                     |
+| Area claims            | `claims` table driven by a terse claim CLI — coarse scopes (`src/auth`) with `intent`; cross-area touches are **drift-logged** (soft) or **denied** (only hot areas); claims validated against live session transcripts (fabricated ids refused)                                   |
+| Event bus              | `coord emit / poll / wait / fact` — agents share state **by reference** (structured events, per-agent cursors, versioned facts), never by retelling prose; `wait` is an adaptive long-poll (250ms → 2s backoff, instant wake on events). SendMessage stays reserved for interrupts |
+| Liveness               | Leases expire when quiet 15 min **and** the owner's transcript is dead — a lane in one long tool call never loses its lease mid-work; claim heartbeats are single-statement UPDATEs on the same DB                                                                                 |
+| Keepwarm               | `llm-keepwarm.ts` + launchd every 4 min: a 1-token **nonce** ping per resident specialist (a cache HIT would skip the forward pass and leave weights paged out) — kills the 27–50s idle-paging first-touch stall                                                                   |
+| Capability dispatch    | `requires` on work items ⊆ `capabilities` on sessions (csv; lanes inherit the parent's) — `work take` refuses mismatches, so a no-shell agent type can never be handed shell work twice                                                                                            |
+| Zombie detection       | Three-state monitor (ZOMBIE = hb + transcript both stale; SUSPECT = one; lookup failure = UNKNOWN, never death) on a 15-min launchd — alerts the canonical coordinator (`fact coordinator.sid`), never auto-reclaims; WAIT_RATE/PAUSED lanes are expected-silent                   |
+| Usage windows          | `quota-window.ts` remembers observed 429 resets (5h cliffs) — dispatch defers around the cliff, and the degradation path is the local LLM stack keeping lanes crawling through blackouts instead of dying                                                                          |
+| Fleet board            | `fleet` (bin/fleet.ts): read-only live dashboard on 127.0.0.1:7799 — every session, per-project boards, and a NEEDS-YOUR-ANSWER panel surfacing `NEED_DECISION` events with inline owner answers                                                                                   |
+| Early conflict warning | `git merge-tree --write-tree <head> <lane>` — pure three-way merge simulation, no working-tree mutation, run between overlapping lanes' checkpoints                                                                                                                                |
+| Integration spine      | One integration worktree; lane commits merge onto the integration HEAD, **qlty runs on the merged state**, green advances HEAD                                                                                                                                                     |
+| Repair                 | Conflicts go to a small repair agent in a disposable worktree — never wake both origin lanes                                                                                                                                                                                       |
+| Lane output            | Checkpoint commits every 10–20 min; lanes report `{base SHA, commit SHA, changed paths, test status}` — the coordinator operates on immutable commits, never working dirs                                                                                                          |
 
 The one rule that matters most: **a lane being green is not sufficient — the
 lane merged onto the current integration HEAD must be green.** Coordinator
@@ -122,7 +122,7 @@ binding protocol for a multi-agent repo lives in
 [docs/coordination-protocol.md](docs/coordination-protocol.md). Manual plist
 install:
 
-```bash
+````bash
 The fleet-monitor and llm-keepwarm agents ship with suspenders — install with its
 ./install.sh --with-launchd. Only the klh-specific agents (claude-insights,
 local-llm) remain in hooks/launchd/ here.```
@@ -195,7 +195,7 @@ Hard rule: **open-source, self-hosted, no paid tiers in the stack.** Model acces
 npm i -g chrome-devtools-mcp
 claude mcp add -s user chrome-devtools -- chrome-devtools-mcp
 claude mcp add -s user -t http context7 https://mcp.context7.com/mcp
-```
+````
 
 ## Skill install gate (how to complete it)
 
