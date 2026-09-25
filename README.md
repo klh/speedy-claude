@@ -96,6 +96,10 @@ architecture review): **isolate execution, serialize only integration.**
 | Event bus | `coord emit / poll / wait / fact` — agents share state **by reference** (structured events, per-agent cursors, versioned facts), never by retelling prose; `wait` is an adaptive long-poll (250ms → 2s backoff, instant wake on events). SendMessage stays reserved for interrupts |
 | Liveness | Leases expire when quiet 15 min **and** the owner's transcript is dead — a lane in one long tool call never loses its lease mid-work; claim heartbeats are single-statement UPDATEs on the same DB |
 | Keepwarm | `llm-keepwarm.ts` + launchd every 4 min: a 1-token **nonce** ping per resident specialist (a cache HIT would skip the forward pass and leave weights paged out) — kills the 27–50s idle-paging first-touch stall |
+| Capability dispatch | `requires` on work items ⊆ `capabilities` on sessions (csv; lanes inherit the parent's) — `work take` refuses mismatches, so a no-shell agent type can never be handed shell work twice |
+| Zombie detection | Three-state monitor (ZOMBIE = hb + transcript both stale; SUSPECT = one; lookup failure = UNKNOWN, never death) on a 15-min launchd — alerts the canonical coordinator (`fact coordinator.sid`), never auto-reclaims; WAIT_RATE/PAUSED lanes are expected-silent |
+| Usage windows | `quota-window.ts` remembers observed 429 resets (5h cliffs) — dispatch defers around the cliff, and the degradation path is the local LLM stack keeping lanes crawling through blackouts instead of dying |
+| Fleet board | `fleet` (bin/fleet.ts): read-only live dashboard on 127.0.0.1:7799 — every session, per-project boards, and a NEEDS-YOUR-ANSWER panel surfacing `NEED_DECISION` events with inline owner answers |
 | Early conflict warning | `git merge-tree --write-tree <head> <lane>` — pure three-way merge simulation, no working-tree mutation, run between overlapping lanes' checkpoints |
 | Integration spine | One integration worktree; lane commits merge onto the integration HEAD, **qlty runs on the merged state**, green advances HEAD |
 | Repair | Conflicts go to a small repair agent in a disposable worktree — never wake both origin lanes |
@@ -119,9 +123,12 @@ binding protocol for a multi-agent repo lives in
 install:
 
 ```bash
-sed "s|__HOME__|$HOME|g" hooks/launchd/com.klh.llm-keepwarm.plist \
+sed "s|__HOME__|$HOME|g; s|__BUN__|$(command -v bun)|g" hooks/launchd/com.klh.llm-keepwarm.plist \
   > ~/Library/LaunchAgents/com.klh.llm-keepwarm.plist
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.klh.llm-keepwarm.plist
+sed "s|__HOME__|$HOME|g; s|__BUN__|$(command -v bun)|g" hooks/launchd/com.klh.fleet-monitor.plist \
+  > ~/Library/LaunchAgents/com.klh.fleet-monitor.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.klh.fleet-monitor.plist
 ```
 
 ## Autonomy settings
