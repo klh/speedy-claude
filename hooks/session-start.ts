@@ -7,7 +7,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { openGovernorDb, projectIdentity, CAPABILITIES } from "./lib/govdb.ts";
 
-type In = { session_id?: string; source?: string };
+type In = { session_id?: string; source?: string; transcript_path?: string };
 
 if (process.env.CLAUDE_FLEET_BOOTSTRAP === "0") process.exit(0);
 
@@ -41,9 +41,9 @@ const RULES =
 // inherit their caps from the parent via coord bootstrap --parent)
 const CAPS = CAPABILITIES.join(",");
 const UPSERT =
-	"INSERT INTO sessions (sid, project, role, parent_sid, worktree, started_at, hb, state, capabilities) " +
-	"VALUES (?, ?, 'worker', NULL, NULL, ?, ?, 'RUNNING', ?) " +
-	"ON CONFLICT(sid) DO UPDATE SET project = excluded.project, hb = excluded.hb, state = 'RUNNING', capabilities = COALESCE(excluded.capabilities, sessions.capabilities)";
+	"INSERT INTO sessions (sid, project, role, parent_sid, worktree, started_at, hb, state, capabilities, transcript_path) " +
+	"VALUES (?, ?, 'worker', NULL, NULL, ?, ?, 'RUNNING', ?, ?) " +
+	"ON CONFLICT(sid) DO UPDATE SET project = excluded.project, hb = excluded.hb, state = 'RUNNING', capabilities = COALESCE(excluded.capabilities, sessions.capabilities), transcript_path = COALESCE(excluded.transcript_path, sessions.transcript_path)";
 
 const DEAD_SQL =
 	"SELECT s.sid FROM sessions s WHERE s.project = ? AND s.state = 'CLOSED' " +
@@ -56,7 +56,7 @@ const OWNED_SQL =
 	"AND state NOT IN ('DONE','SUPERSEDED','FAILED') ORDER BY id";
 
 const db = openGovernorDb();
-db.query(UPSERT).run(sid, project, now, now, CAPS);
+db.query(UPSERT).run(sid, project, now, now, CAPS, input.transcript_path ?? null);
 const out = [`SESSION ${sid.slice(0, 8)}  project=${pname(project)}`];
 
 // lineage: only `resume` may rebind — startup/clear/compact never touch

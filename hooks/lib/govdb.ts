@@ -93,6 +93,7 @@ export function openGovernorDb(): Database {
 	// NULL on either side = legacy = no constraint. Explicit migration step.
 	const sessCols = (db.query("PRAGMA table_info(sessions)").all() as { name: string }[]).map((c) => c.name);
 	if (!sessCols.includes("capabilities")) db.run("ALTER TABLE sessions ADD COLUMN capabilities TEXT");
+	if (!sessCols.includes("transcript_path")) db.run("ALTER TABLE sessions ADD COLUMN transcript_path TEXT");
 	const wiCols = (db.query("PRAGMA table_info(work_items)").all() as { name: string }[]).map((c) => c.name);
 	if (!wiCols.includes("requires")) db.run("ALTER TABLE work_items ADD COLUMN requires TEXT");
 	if (uv < 2) db.run("PRAGMA user_version = 2");

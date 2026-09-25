@@ -62,7 +62,7 @@ for (const l of db.query("SELECT path, sid, ts FROM locks WHERE ts < ?").all(now
 
 // 4. lane facts must stay inside the preemption state machine
 for (const f of db.query("SELECT key, value FROM facts WHERE key LIKE 'lane.%.state'").all() as { key: string; value: string }[]) {
-	if (!["RUNNING", "PAUSE_REQUESTED", "PAUSED", "RESUME_READY", "BLOCKED"].includes(f.value)) {
+	if (!["RUNNING", "PAUSE_REQUESTED", "PAUSED", "RESUME_READY", "BLOCKED", "WAIT_RATE"].includes(f.value)) {
 		issues.push(`lane fact ${f.key} = ${f.value} — outside state machine`);
 	}
 }
@@ -74,6 +74,65 @@ for (const e of db.query("SELECT id, payload FROM events ORDER BY id DESC LIMIT 
 			JSON.parse(e.payload);
 		} catch {
 			issues.push(`event #${e.id} has malformed payload`);
+		}
+	}
+}
+
+// 7. zombie lanes: CLAIMED items whose owner went silent — usage-limit
+// deaths freeze subagents silently while the claim and the wall clock keep
+// going (2026-09-24: 47 frozen, 6h blackout). THREE-STATE multi-signal rule
+// (lookup failure is NEVER death):
+//   ZOMBIE  = hb stale + transcript stale (2 independent signals)
+//   SUSPECT = one signal stale, other UNKNOWN
+//   UNKNOWN = telemetry missing — never claims death
+// Threshold from fact fleet.zombie_after_ms (default 45min). WAIT_RATE /
+// PAUSED sessions are expected-silent, never zombies. Remediation (reclaim
+// + re-dispatch pointing at the frozen transcript) belongs to the canonical
+// coordinator; alerts dedupe via fact zombie.<id> (6h).
+const ZOMBIE_MS = Number(
+	(db.query("SELECT value FROM facts WHERE key = 'fleet.zombie_after_ms'").get() as { value: string } | null)?.value ?? 45 * 60_000,
+);
+const zProjects = db.query("SELECT DISTINCT project FROM work_items WHERE state IN ('CLAIMED','RUNNING')").all() as { project: string }[];
+for (const { project } of zProjects) {
+	const claimed = db
+		.query("SELECT id, owner_sid, title FROM work_items WHERE project = ? AND state IN ('CLAIMED','RUNNING') AND owner_sid IS NOT NULL")
+		.all(project) as { id: string; owner_sid: string; title: string }[];
+	for (const w of claimed) {
+		const sess = db.query("SELECT state, hb, transcript_path FROM sessions WHERE sid = ?").get(w.owner_sid) as
+			| { state: string; hb: number; transcript_path: null | string }
+			| null;
+		if (sess && ["PAUSED", "WAIT_RATE"].includes(sess.state)) continue; // expected-silent
+		const signals: string[] = [];
+		let known = 0;
+		if (sess?.hb) {
+			known++;
+			if (now - sess.hb > ZOMBIE_MS) signals.push(`hb ${Math.round((now - sess.hb) / 60000)}min`);
+			else signals.length = 0; // fresh hb outranks older transcript signal
+		}
+		if (sess?.transcript_path) {
+			try {
+				const age = now - statSync(sess.transcript_path).mtimeMs;
+				known++;
+				if (age > ZOMBIE_MS) signals.push(`transcript ${Math.round(age / 60000)}min`);
+			} catch {
+				// path recorded but unstat-able — telemetry gap, not death
+			}
+		}
+		const verdict = signals.length >= 2 ? "ZOMBIE" : signals.length === 1 ? "SUSPECT" : known === 0 ? "UNKNOWN" : "ACTIVE";
+		const label = `${w.owner_sid.slice(0, 10)} ${verdict}${signals.length ? ` (${signals.join(", ")})` : " (no telemetry)"}`;
+		if (verdict === "ACTIVE") continue;
+		const fk = `zombie.${w.id}`;
+		const seen = db.query("SELECT ts FROM facts WHERE key = ?").get(fk) as { ts: number } | null;
+		if (!seen || now - seen.ts > 6 * 3600_000) {
+			db.query("INSERT OR REPLACE INTO facts (key, value, source, version, ts) VALUES (?, ?, 'monitor', 1, ?)").run(fk, label, now);
+			if (verdict === "ZOMBIE") {
+				db.query(
+					"INSERT INTO events (ts, source, kind, scope, payload, target) VALUES (?, 'monitor', 'alert', ?, ?, (SELECT value FROM facts WHERE key = 'coordinator.sid'))",
+				).run(now, w.id, JSON.stringify({ note: `ZOMBIE lane: ${label} — reclaim + re-dispatch pointing at its transcript` }));
+			}
+			fixed.push(`${verdict} ${w.id} (${label})`);
+		} else if (verdict === "ZOMBIE") {
+			issues.push(`zombie ${w.id}: ${label} (alerted ${Math.round((now - seen.ts) / 60000)}min ago)`);
 		}
 	}
 }

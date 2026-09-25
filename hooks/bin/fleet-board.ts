@@ -119,11 +119,14 @@ function inbox(sid: string): unknown[] {
 
 function needsMap(): Record<string, { id: number; tsAgo: number; source: string; note: string }[]> {
 	const out: Record<string, { id: number; tsAgo: number; source: string; note: string }[]> = {};
-	for (const s of db.query("SELECT sid FROM sessions").all() as { sid: string }[]) {
-		const cur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(s.sid) as { event_id: number } | null)?.event_id ?? 0;
+	// every distinct NEED% target surfaces — including alias targets with no
+	// sessions row (dead-letter inboxes are exactly where decisions pile up)
+	const targets = db.query("SELECT DISTINCT target AS sid FROM events WHERE kind LIKE 'NEED%' AND target IS NOT NULL").all() as { sid: string }[];
+	for (const { sid } of targets) {
+		const cur = (db.query("SELECT event_id FROM cursors WHERE sid = ?").get(sid) as { event_id: number } | null)?.event_id ?? 0;
 		for (const e of db
 			.query("SELECT id, ts, source, payload FROM events WHERE target = ? AND id > ? AND kind LIKE 'NEED%' AND id NOT IN (SELECT CAST(substr(key, 11) AS INTEGER) FROM facts WHERE key LIKE 'board.ack.%') ORDER BY id")
-			.all(s.sid, cur) as any[]) {
+			.all(sid, cur) as any[]) {
 			let note = "";
 			try {
 				const p = e.payload ? JSON.parse(e.payload) : {};
@@ -131,7 +134,7 @@ function needsMap(): Record<string, { id: number; tsAgo: number; source: string;
 			} catch {
 				note = String(e.payload ?? "");
 			}
-			(out[s.sid] ??= []).push({ id: e.id, tsAgo: ago(e.ts), source: e.source, note });
+			(out[sid] ??= []).push({ id: e.id, tsAgo: ago(e.ts), source: e.source, note });
 		}
 	}
 	return out;
