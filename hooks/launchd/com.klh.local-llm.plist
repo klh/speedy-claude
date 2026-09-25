@@ -6,21 +6,21 @@
     <string>com.klh.local-llm</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/kk/.local/bin/bun</string>
-        <string>/Users/kk/.claude/local-llm/swarm.ts</string><string>start</string>
+        <string>__HOME__/.local/bin/bun</string>
+        <string>__HOME__/.claude/local-llm/swarm.ts</string><string>start</string>
     </array>
     <key>KeepAlive</key>
     <true/>
     <key>RunAtLoad</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Users/kk/.claude-insights/mlx-swarm.log</string>
+    <string>__HOME__/.claude-insights/mlx-swarm.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/kk/.claude-insights/mlx-swarm.log</string>
+    <string>__HOME__/.claude-insights/mlx-swarm.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/Users/kk/.local/bin:/Users/kk/.local/share/uv/tools/mlx-lm/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>__HOME__/.local/bin:__HOME__/.local/share/uv/tools/mlx-lm/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
     <!-- Swarm: 3 specialists (~20GB) + router. 108GB free for apps + KV cache. -->
 </dict>
