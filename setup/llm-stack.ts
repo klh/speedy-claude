@@ -290,7 +290,7 @@ async function stepCoordination(): Promise<void> {
     "llm-stack",
   ]).catch(() => {});
   console.log(
-    `  ✓ coordination plane ready — claims: hooks/bin/claim.ts, bus: hooks/bin/coord.ts`,
+    `  ✓ coordination plane ready — provided by klh/suspenders (~/.claude/hooks/suspenders/)`,
   );
 }
 

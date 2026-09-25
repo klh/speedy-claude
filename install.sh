@@ -23,6 +23,19 @@ OS="$(uname -s)"
 ARCH="$(uname -m)"
 info "Detected: $OS $ARCH"
 
+# ─── Control plane: suspenders (dependency, not vendored) ──
+# speedy is a config layer on top of klh/suspenders (control-plane CLIs,
+# hook gates, fleet board, monitor). Install it first.
+if [ ! -f "$HOME/.claude/hooks/suspenders/bin/work.ts" ]; then
+  info "installing the suspenders control plane (klh/suspenders)..."
+  T=$(mktemp -d)
+  git clone --depth 1 https://github.com/klh/suspenders "$T/suspenders"
+  (cd "$T/suspenders" && ./install.sh --wire)
+  rm -rf "$T"
+else
+  info "suspenders control plane already installed"
+fi
+
 # ─── Brew packages ───────────────────────────────────────
 
 BREW_TOOLS=(

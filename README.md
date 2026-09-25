@@ -123,13 +123,9 @@ binding protocol for a multi-agent repo lives in
 install:
 
 ```bash
-sed "s|__HOME__|$HOME|g; s|__BUN__|$(command -v bun)|g" hooks/launchd/com.klh.llm-keepwarm.plist \
-  > ~/Library/LaunchAgents/com.klh.llm-keepwarm.plist
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.klh.llm-keepwarm.plist
-sed "s|__HOME__|$HOME|g; s|__BUN__|$(command -v bun)|g" hooks/launchd/com.klh.fleet-monitor.plist \
-  > ~/Library/LaunchAgents/com.klh.fleet-monitor.plist
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.klh.fleet-monitor.plist
-```
+The fleet-monitor and llm-keepwarm agents ship with suspenders — install with its
+./install.sh --with-launchd. Only the klh-specific agents (claude-insights,
+local-llm) remain in hooks/launchd/ here.```
 
 ## Autonomy settings
 
